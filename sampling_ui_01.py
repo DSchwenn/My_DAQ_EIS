@@ -34,20 +34,22 @@ import pickle
 # k Test correlation of FFT with mean
 # k Test correlation of FFt with FFT
 # Consider prerequisite to add more methods for signal processing -> specifically FFT to component signal(s)
-# Recording functions
-# Save & load functions...
-#  Sample/writing rates, Hold f, Device, Frequencies, channels, plot settings, recording paths
-# Plot settings: Toolbar, Primary, Type, N, Channel select, Manual Lim, Vmin, Vmax
-# Start and stop into Menus
+# k Recording functions
+# k Save & load functions...
+# k Sample/writing rates, Hold f, Device, Frequencies, channels, plot settings, recording paths
+# k Plot settings: Toolbar, Primary, Type, N, Channel select, Manual Lim, Vmin, Vmax
+# k Start and stop into Menus
 #
 # k Recording functions: select & uise paths
 # k  Check recordings. Why was one of them not started when kill was called...?
-# Menu functions...
-# overwritePlotSettingListAbstr
-# set up Git?
+# k Menu functions...
+# k overwritePlotSettingListAbstr
+# k set up Git?
 #
 # ??: After changing device -> channels are invalid...? Reset? Ask?
+# Add to save/ load: V-Range, Correlation time, Total amplitude
 #
+# **?: What happens correlating FFTxs/ FFTxmean? latter should output N chn?
 
 class MyMainWindow(QtWidgets.QMainWindow):
 
@@ -846,8 +848,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
         sr = self.ui.readSampleRateSpinBox.value()
         wr = self.ui.writeSampleRateSpinBox.value()
         hld_f = self.ui.device_hold_checkBox.isChecked()
+        vrng = self.ui.readVoltageRangeSpinBox.value()
+        corrTm = self.ui.readCorrelationTimeSpinBox.value()
+        wrAmp = self.ui.writing_amplitude_SpinBox.value()
 
-        elementsLst = [rec_cal_pth,rec_raw_pth,dev_ix,sr,wr,hld_f]
+
+        elementsLst = [rec_cal_pth,rec_raw_pth,dev_ix,sr,wr,hld_f,vrng,corrTm,wrAmp]
 
         stimLst = self.getStiumSettings() # [f,w,oor,lrPhase,r,g,b,prt,linkRGB]
         
@@ -900,6 +906,15 @@ class MyMainWindow(QtWidgets.QMainWindow):
         if(prt<self.ui.stimSerialcomboBox.count()):
             self.ui.stimSerialcomboBox.setCurrentIndex(dev_ix)
         self.ui.stimLinkRGBBrightcheckBox.setChecked(linkRGB)
+
+
+        # More UI
+        vrng = elementsLst[6]
+        corrTm = elementsLst[7]
+        wrAmp = elementsLst[8]
+        self.ui.readVoltageRangeSpinBox.setValue(vrng)
+        self.ui.readCorrelationTimeSpinBox.setValue(corrTm)
+        self.ui.writing_amplitude_SpinBox.setValue(wrAmp)
 
 
 
