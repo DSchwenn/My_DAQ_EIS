@@ -605,11 +605,13 @@ class MyMainWindow(QtWidgets.QMainWindow):
             return
         del self.readChannels[val]
         self.readUpdateChannelList()
+        self.updatePlotLists()
 
     @QtCore.pyqtSlot()
     def readClearList(self):
         self.readChannels = []
         self.readUpdateChannelList()
+        self.updatePlotLists()
 
     @QtCore.pyqtSlot()
     def readUpdateTerminalRef(self):

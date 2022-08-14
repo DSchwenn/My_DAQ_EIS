@@ -68,10 +68,19 @@ class ChannelSampleInfo:
 
         ci = self.channelList[channel]
         
+        corrWithFFT = 0
+        if(len(ci)>0 and ci[2][0] == 'C'):
+            ch1 = ci[3][0]
+            ch2 = ci[3][1]
+            ci1 = self.channelList[ch1]
+            ci2 = self.channelList[ch2]
+            if( (ci1[2][0] == 'F') !=  (ci2[2][0] == 'F') ): # if only one of them is FFT (otherwise means will be used)
+                corrWithFFT = 1
+
         legend = []
         # 2 cases: 1 or N sample per channel, one channel -> one legend entry
         #           1 sample  for N channels - one channel pre frequency -> N legend entries
-        if(len(ci)>0 and ci[2][0] == 'F'): #nDat>1):  -> only add frequency for FFT...
+        if(len(ci)>0 and (ci[2][0] == 'F' or corrWithFFT)): #nDat>1):  -> only add frequency for FFT...
             for f in f_list:
                 tstr = ci[0] + " " + str(f) + "Hz"
                 tstr = self.addHeaderInfo(tstr,ci,forHeader)
