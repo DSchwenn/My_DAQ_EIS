@@ -14,7 +14,7 @@ class MyDataProcessing:
         dat = self.dat
         if(win != FFTWinTp.NONE):
             dat = self.applyWindow(dat,N,win)
-        f1 = fft.fft( self.dat )
+        f1 = fft.fft( dat )
         ixi=self.getFrequencyIndex(f_list,N,sr)
         fres = f1[ixi]
         return fres
@@ -33,6 +33,7 @@ class MyDataProcessing:
             wDat = np.kaiser(N,14)
         dat = np.copy(dat)
         dat = np.multiply(dat,wDat)
+        return dat
 
 
     def getFrequencyIndex(self,f_list,ss,sr):
