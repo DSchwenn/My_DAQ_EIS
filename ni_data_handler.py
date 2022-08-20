@@ -31,7 +31,6 @@ class NiDataHandler:
 
         self.wSampleRate = 100.0
         self.wData = []
-        self.functionGen = None
         self.wDevice = ''
         self.wChannels = []
         self.ni_writer = None
@@ -65,12 +64,10 @@ class NiDataHandler:
 
     # override utilizting self.sampleInfo
     def setupWriting_si(self, channels):
-        fg = self.sampleInfo.getFunctionGen()
         device = self.sampleInfo.getDevice()
-        self.setupWriting(device, channels, fg)
+        self.setupWriting(device, channels)
 
-    def setupWriting(self, device, channels, fg):
-        self.functionGen = fg
+    def setupWriting(self, device, channels):
         self.wDevice = device
         self.wChannels = channels
 
@@ -78,7 +75,8 @@ class NiDataHandler:
         if( self.writing ):
             return 0
         self.writing = True
-        self.ni_writer = NiWriter(self.functionGen.getSampleRate(),self.functionGen.getSignal(),self.wDevice ,self.wChannels)
+        fg = self.sampleInfo.getFunctionGen()
+        self.ni_writer = NiWriter(fg.getSampleRate(),fg.getSignal(),self.wDevice ,self.wChannels)
         self.ni_writer.startWriting()
 
     def startSamplingAndWriting(self):
@@ -165,7 +163,7 @@ class NiDataHandler:
         # first process sampled Data 
         for i in range(0,len(self.channelIxi)): # for each registered channel
             ix2 = self.channelRefIxi[i]
-            if( self.sampleInfo.isChannelUsed(i) and len(ix2)<2 ): # do not process channels with 2 references (correlation of 2 results)
+            if( self.sampleInfo.isChannelUsed(i) and len(ix2)<2 ): # do not process channels with 2 references (correlation or division of 2 results)
                 ix = self.channelIxi[i] # index in dat
                 tp = self.dat_type[i] # processing type
                 # process data

@@ -138,7 +138,7 @@
            <double>100000.000000000000000</double>
           </property>
           <property name="value">
-           <double>10000.000000000000000</double>
+           <double>15000.000000000000000</double>
           </property>
          </widget>
          <widget class="QLabel" name="label_12">
@@ -170,7 +170,7 @@
            <double>100000.000000000000000</double>
           </property>
           <property name="value">
-           <double>5000.000000000000000</double>
+           <double>15000.000000000000000</double>
           </property>
          </widget>
          <widget class="QCheckBox" name="device_hold_checkBox">
@@ -360,6 +360,11 @@
           <item>
            <property name="text">
             <string>Raw</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Divide</string>
            </property>
           </item>
          </widget>
@@ -1602,7 +1607,7 @@
      <x>0</x>
      <y>0</y>
      <width>1296</width>
-     <height>22</height>
+     <height>31</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1628,9 +1633,21 @@
     <addaction name="actionRaw_data"/>
     <addaction name="actionAll"/>
    </widget>
+   <widget class="QMenu" name="menuFFT_Window">
+    <property name="title">
+     <string>FFT Window</string>
+    </property>
+    <addaction name="actionNone"/>
+    <addaction name="actionHamming"/>
+    <addaction name="actionHanning"/>
+    <addaction name="actionBlackman"/>
+    <addaction name="actionBarlett"/>
+    <addaction name="actionKaiser_14"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSampling"/>
    <addaction name="menuRecording"/>
+   <addaction name="menuFFT_Window"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoad_settings">
@@ -1688,6 +1705,57 @@
    </property>
    <property name="text">
     <string>All</string>
+   </property>
+  </action>
+  <action name="actionNone">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>None</string>
+   </property>
+  </action>
+  <action name="actionHamming">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Hamming</string>
+   </property>
+  </action>
+  <action name="actionHanning">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Hanning</string>
+   </property>
+  </action>
+  <action name="actionBlackman">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Blackman</string>
+   </property>
+  </action>
+  <action name="actionBarlett">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Barlett</string>
+   </property>
+  </action>
+  <action name="actionKaiser_14">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Kaiser 14</string>
    </property>
   </action>
  </widget>

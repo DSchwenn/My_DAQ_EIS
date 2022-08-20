@@ -1,5 +1,15 @@
 from function_gen import *
 
+from enum import Enum
+
+class FFTWinTp(Enum):
+    NONE = 0
+    HAM = 1
+    HAN = 2
+    BLK = 3
+    BRT = 4
+    KAI = 5
+
 
 class ChannelSampleInfo:
     def __init__(self):
@@ -18,6 +28,7 @@ class ChannelSampleInfo:
         self.v_range = 10.0
         self.datareading = False
         self.corrTime = 2.
+        self.fftWinType = 0
 
 
     def addRecipient(self,callbackFkt,plotIndex):
@@ -69,18 +80,21 @@ class ChannelSampleInfo:
         ci = self.channelList[channel]
         
         corrWithFFT = 0
-        if(len(ci)>0 and ci[2][0] == 'C'):
+        divWithFFT = 0
+        if(len(ci)>0 and (ci[2][0] == 'C' or ci[2][0] == 'D') ):
             ch1 = ci[3][0]
             ch2 = ci[3][1]
             ci1 = self.channelList[ch1]
             ci2 = self.channelList[ch2]
-            if( (ci1[2][0] == 'F') !=  (ci2[2][0] == 'F') ): # if only one of them is FFT (otherwise means will be used)
+            if( ci[2][0] == 'C'  and (ci1[2][0] == 'F') !=  (ci2[2][0] == 'F') ): # if only one of them is FFT (otherwise means will be used)
                 corrWithFFT = 1
+            elif( ci[2][0] == 'D'  and (ci1[2][0] == 'F') or  (ci2[2][0] == 'F') ):
+                divWithFFT = 1
 
         legend = []
         # 2 cases: 1 or N sample per channel, one channel -> one legend entry
         #           1 sample  for N channels - one channel pre frequency -> N legend entries
-        if(len(ci)>0 and (ci[2][0] == 'F' or corrWithFFT)): #nDat>1):  -> only add frequency for FFT...
+        if(len(ci)>0 and (ci[2][0] == 'F' or corrWithFFT or divWithFFT)): #nDat>1):  -> only add frequency for FFT...
             for f in f_list:
                 tstr = ci[0] + " " + str(f) + "Hz"
                 tstr = self.addHeaderInfo(tstr,ci,forHeader)
@@ -102,6 +116,8 @@ class ChannelSampleInfo:
             return 1
         elif( typeStr[0] == 'C' ): # Correlation
             return 2
+        elif( typeStr[0] == 'D' ): # Division
+            return 6
         elif( typeStr[0] == 'M' ): # Mean Max Min
             if( typeStr[1] == 'a' ):
                 return 4
@@ -265,3 +281,10 @@ class ChannelSampleInfo:
 
     def getCorrTime(self):
         return self.corrTime
+
+
+    def setFFTWin(self,win):
+        self.fftWinType = win # id according to order in MainWindow Menu.
+
+    def getFFTWin(self):
+        return self.fftWinType

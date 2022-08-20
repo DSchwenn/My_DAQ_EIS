@@ -27,6 +27,10 @@ from channel_sample_info import *
 import traceback
 import pickle
 
+# Compile Workaround
+# "C:\Users\DSchwenn\anaconda3\python.exe" "c:\Users\DSchwenn\.vscode\extensions\seanwu.vscode-qt-for-python-1.3.7/python/scripts/uic.py" -o "d:\Google Drive\MyData\MyEIS\pycode\qt_for_python\uic\sampling_ui_01.py" "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.ui"  
+# required pip install pyqt5-tools from anaconda console...
+# "C:\Users\DSchwenn\anaconda3\python.exe" "C:/Users/DSchwenn/anaconda3/Lib/site-packages/qtpy/uic.py" -o "d:\Google Drive\MyData\MyEIS\pycode\qt_for_python\uic\sampling_ui_01.py" "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.ui"  
 
 # TODO:
 # k Test correlation of raw
@@ -49,7 +53,25 @@ import pickle
 # ??: After changing device -> channels are invalid...? Reset? Ask?
 # Add to save/ load: V-Range, Correlation time, Total amplitude
 #
-# **?: What happens correlating FFTxs/ FFTxmean? latter should output N chn?
+# k What happens correlating FFTxs/ FFTxmean? latter should output N chn?
+# k Start tick mark not synced with status yet...
+# k Add Processing method: division (aim: FFT measurement div FFT Source; Maybe means; Not necesarily raw)
+#       ?: divide raw, then FFT...?
+# Add anti aliasing filter
+# k Update schematics (measurement AC 0.1uF/200kOhm)
+# k Sponge electrodes
+#
+# Check/ prevent: correlation/division FFT/Mean & raw
+#
+# k Check why manually set F does not work right? Aliasses? Async write/ read
+#    Works now up to the max writing value ~ 20kHz
+#
+# The multi itteration when changing plot settings should be solved...
+#   ~ Multible call update plot lists... whatever
+#
+# k Add windowing to FFT ~ slect via menu
+# ?: Plot data over frequency?g
+
 
 class MyMainWindow(QtWidgets.QMainWindow):
 
@@ -85,6 +107,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.device_comboBox.currentIndexChanged.connect(
             self.deviceUpdateDeviceInfo)
         self.deviceRefreshDeviceInfo()
+        self.ui.readSampleRateSpinBox.valueChanged.connect(self.forcePlotUpdate)
+        self.ui.writeSampleRateSpinBox.valueChanged.connect(self.forcePlotUpdate)
 
         # Read tab
         self.ui.tabWidget.currentChanged.connect(
@@ -192,6 +216,13 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.actionProcessed_Data.triggered.connect(self.startRecordingCalculated)
         self.ui.actionRaw_data.triggered.connect(self.startRecordingRaw)
         self.ui.actionAll.triggered.connect(self.startRecordingAll)
+        self.ui.actionNone.triggered.connect(self.setFFTWinNon)
+        self.ui.actionHamming.triggered.connect(self.setFFTWinHam)
+        self.ui.actionHanning.triggered.connect(self.setFFTWinHan)
+        self.ui.actionBlackman.triggered.connect(self.setFFTWinBlk)
+        self.ui.actionBarlett.triggered.connect(self.setFFTWinBrt)
+        self.ui.actionKaiser_14.triggered.connect(self.setFFTWinKai)
+
 
         # gogogo
         self.ui.start_device_pb.clicked.connect(self.startAll)
@@ -200,22 +231,59 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.show()
 
 
+    def handleUpdateCallbacks(self,switchOn):
+        if(switchOn):
+            self.ui.top_show_toolbar_checkBox.stateChanged.connect(self.updateTopPlotDistribution)
+            self.ui.top_plot_live_checkBox.stateChanged.connect(self.updateTopPlotDistribution)
+            self.ui.top_plot_NspinBox.valueChanged.connect(self.updateTopPlotDistribution)
+            self.ui.top_useManLim_checkBox.stateChanged.connect(self.updateTopPlotDistribution)
+            self.ui.top_lowerLimit_doubleSpinBox.valueChanged.connect(self.updateTopPlotDistribution)
+            self.ui.top_upperLimit_doubleSpinBox.valueChanged.connect(self.updateTopPlotDistribution)
+            self.top_channel_cb.contentChanged.connect(self.updateTopPlotDistribution)
+            self.ui.btm_show_toolbar_checkBox.stateChanged.connect(self.updateBtmPlotDistribution)
+            self.ui.btm_plot_live_checkBox.stateChanged.connect(self.updateBtmPlotDistribution)
+            self.ui.btm_plot_NspinBox.valueChanged.connect(self.updateBtmPlotDistribution)
+            self.ui.btm_useManLim_checkBox.stateChanged.connect(self.updateBtmPlotDistribution)
+            self.ui.btm_lowerLimit_doubleSpinBox.valueChanged.connect(self.updateBtmPlotDistribution)
+            self.ui.btm_upperLimit_doubleSpinBox.valueChanged.connect(self.updateBtmPlotDistribution)
+            self.btm_channel_cb.contentChanged.connect(self.updateBtmPlotDistribution)
+            self.ui.enable_raw_recording_checkBox.stateChanged.connect(self.updateRecorderStatus)
+            self.ui.enable_fft_recording_checkBox.stateChanged.connect(self.updateRecorderStatus)
+        else:
+            self.ui.top_show_toolbar_checkBox.stateChanged.disconnect(self.updateTopPlotDistribution)
+            self.ui.top_plot_live_checkBox.stateChanged.disconnect(self.updateTopPlotDistribution)
+            self.ui.top_plot_NspinBox.valueChanged.disconnect(self.updateTopPlotDistribution)
+            self.ui.top_useManLim_checkBox.stateChanged.disconnect(self.updateTopPlotDistribution)
+            self.ui.top_lowerLimit_doubleSpinBox.valueChanged.disconnect(self.updateTopPlotDistribution)
+            self.ui.top_upperLimit_doubleSpinBox.valueChanged.disconnect(self.updateTopPlotDistribution)
+            self.top_channel_cb.contentChanged.disconnect(self.updateTopPlotDistribution)
+            self.ui.btm_show_toolbar_checkBox.stateChanged.disconnect(self.updateBtmPlotDistribution)
+            self.ui.btm_plot_live_checkBox.stateChanged.disconnect(self.updateBtmPlotDistribution)
+            self.ui.btm_plot_NspinBox.valueChanged.disconnect(self.updateBtmPlotDistribution)
+            self.ui.btm_useManLim_checkBox.stateChanged.disconnect(self.updateBtmPlotDistribution)
+            self.ui.btm_lowerLimit_doubleSpinBox.valueChanged.disconnect(self.updateBtmPlotDistribution)
+            self.ui.btm_upperLimit_doubleSpinBox.valueChanged.disconnect(self.updateBtmPlotDistribution)
+            self.btm_channel_cb.contentChanged.disconnect(self.updateBtmPlotDistribution)
+            self.ui.enable_raw_recording_checkBox.stateChanged.disconnect(self.updateRecorderStatus)
+            self.ui.enable_fft_recording_checkBox.stateChanged.disconnect(self.updateRecorderStatus)
+
     def populateWriteList(self):
         self.writingFrequency = [100.0, 500.0, 1500.0, 3000.0]
         self.writingPhase = [0.0, 0.0, 0.0, 0.0]
         self.writingAmplitude = [0.7, 0.8, 0.9, 1.0]
         self.updateFrequencyList()
 
+
     def UpdateChannelSampleInfo(self):  # TODO: for both plots...
-        fg = self.generateFunctionGenerator()
-        plotSettingList = self.generatePlotSettingList(fg)
+        fg = self.generateFunctionGenerator(True)
         readRate = self.ui.readSampleRateSpinBox.value()
         writeRate = self.ui.writeSampleRateSpinBox.value()
+        fg.set_sample_rate(writeRate)
+        plotSettingList = self.generatePlotSettingList(fg)
         ix = self.ui.device_comboBox.currentIndex()
         device = self.devicesInfo.getDevice(ix-1)
         v_range = self.ui.readVoltageRangeSpinBox.value()
         corrTime = self.ui.readCorrelationTimeSpinBox.value()
-        fg.set_sample_rate(readRate)
         self.sampleInfo.updateInfo(
             fg, self.readChannels, plotSettingList, readRate, writeRate, v_range, corrTime, device)
         print("SI: " + str(plotSettingList))
@@ -236,7 +304,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 nData = [fg.getNofF(), 1]
             elif(chnInfoS == 'R'):  # raw -> also just one channel...
                 nData = [1, fg.getDataSize()]
-            elif(chnInfoS == 'C'): # for correlation, if there are 2 references and only one is FFT: 1 channel per F
+            elif(chnInfoS == 'C' or chnInfoS == 'D'): # for correlation, if there are 2 references and only one is FFT: 1 channel per F
                 nData = [1, 1]
                 chRefIx = chnInfo[3]
                 if(len(chRefIx)>1):
@@ -244,7 +312,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
                     chnInfoS2 = chnInfo2[2][0]
                     chnInfo3 = self.readChannels[chRefIx[1]]
                     chnInfoS3 = chnInfo3[2][0]
-                    if( (chnInfoS2=='F') != (chnInfoS3=='F')):
+                    if((chnInfoS2=='F') or (chnInfoS3=='F')):
                         nData = [fg.getNofF(), 1]
             else:
                 nData = [1, 1]
@@ -302,7 +370,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             chn = []
             chCount = 0
             for ix,ch in enumerate(self.readChannels): 
-                if(ch[2][0] == 'F'):
+                if(ch[2][0] == 'F' or ch[2][0] == 'D'):
                     chn.append(ix)
                     chCount = chCount+nn
                 elif(ch[2][0] != 'R' ): #ch[2][0] == 'C' ):
@@ -428,12 +496,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.readChannelcomboBox.addItems(chns)
             self.readUpdateTerminalRef()
             self.readUpdateChannelList()
-        elif(ix == 3 or ix == 4):  # Top plot or brm plot
-            self.updatePlotTabs()
+        #elif(ix == 3 or ix == 4):  # Top plot or brm plot
+        #    self.updatePlotTabs()
 
-    # plot function
-    def updatePlotTabs(self):
-        1  # refresh channel list from self.readChannels
 
     # read functions
     def readUpdateChannelList(self):
@@ -447,6 +512,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot()
     def readAddChannel(self):
+        #self.handleUpdateCallbacks(False) # goal: dont repeatedly call this function due to the UI changes and related callbacvks itr doe
+
         ix_dev = self.ui.device_comboBox.currentIndex()
         if(ix_dev < 1):
             return
@@ -454,7 +521,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         ter = self.ui.terminaCVonfiguration_comboBox.currentText()
         type = self.ui.channelDataTypeComboBox.currentText()
         ref = [0]
-        if("Corr" in type):
+        if(("Corr" in type) or ("Div" in type)):
             ref = [x.row() for x in self.ui.readChannelList.selectedIndexes()]
             if(ref == []):
                 ref = [self.ui.readChannelList.currentRow()]
@@ -475,6 +542,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
         self.readUpdateChannelList()
         self.updatePlotLists()
+
+        #self.handleUpdateCallbacks(True)
+
 
     def updatePlotLists(self):
         self.top_IsUpdating = True
@@ -576,6 +646,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.updateBtmPlotDistribution()
 
     @QtCore.pyqtSlot()
+    def forcePlotUpdate(self):
+        self.UpdateChannelSampleInfo()
+        self.topplot.updatePlot()
+        self.btmplot.updatePlot()
+
+    @QtCore.pyqtSlot()
     def updateTopPlotDistribution(self):
         self.UpdateChannelSampleInfo()
         # self.sampleInfo.channelNeedsUpdate(self.topplot.getIndex())
@@ -660,7 +736,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def updateFrequencies(self):
         if(self.ui.device_hold_checkBox.isChecked):
-            fg = self.generateFunctionGenerator()
+            fg = self.generateFunctionGenerator(False)
             self.ui.writeSampleRateSpinBox.setValue(fg.getSampleRate())
             # *2 led to async between reqad and write...
             self.ui.readSampleRateSpinBox.setValue(fg.getSampleRate())
@@ -703,19 +779,22 @@ class MyMainWindow(QtWidgets.QMainWindow):
         if(len(self.writingFrequency) < 1):
             return
 
-        fg = self.generateFunctionGenerator()
+        fg = self.generateFunctionGenerator(True)
         sig = fg.getSignal()
         print("Sig: " + str(np.size(sig)) + " at " + str(fg.getSampleRate()))
 
         plt.plot(np.linspace(0, 1, np.size(sig)), sig[0, :])
         plt.show()
 
-    def generateFunctionGenerator(self):
+    def generateFunctionGenerator(self,fFromUI):
         ff = np.array(self.writingFrequency)
         pp = np.array(self.writingPhase)
         aa = np.array(self.writingAmplitude)
         allAmpl = self.ui.writing_amplitude_SpinBox.value()
         fg = FunctionGen(ff, pp, aa, allAmpl)
+        if(fFromUI):
+            writeRate = self.ui.writeSampleRateSpinBox.value()
+            fg.set_sample_rate(writeRate)
         return fg
 
     def changeUIStartStop(self, isStarted):
@@ -728,6 +807,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.readSampleRateSpinBox.setEnabled(False)
             self.ui.writeSampleRateSpinBox.setEnabled(False)
             self.ui.device_hold_checkBox.setEnabled(False)
+            self.ui.actionRun.setChecked(True)
         else:
             self.ui.start_device_pb.setText("Start")
             self.ui.read_tab.setEnabled(True)
@@ -737,6 +817,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.readSampleRateSpinBox.setEnabled(True)
             self.ui.writeSampleRateSpinBox.setEnabled(True)
             self.ui.device_hold_checkBox.setEnabled(True)
+            self.ui.actionRun.setChecked(False)
 
     @QtCore.pyqtSlot()
     def startAll(self):
@@ -808,7 +889,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             # update plot settings
             # according to generatePlotSettingListAbstr() -> set UI, then call self.UpdateChannelSampleInfo()
             # Frequency lists must be restored already
-            fg = self.generateFunctionGenerator()
+            fg = self.generateFunctionGenerator(True)
             # Also self.readChannels must be set also updatePlotLists
             # Top plot
             if(len(self.readChannels) > 0): # make sure channel lists are present before setting them
@@ -836,7 +917,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         fLst = self.writingFrequency
         pLst = self.writingPhase
         aLst = self.writingAmplitude
-        fg = self.generateFunctionGenerator()
+        fg = self.generateFunctionGenerator(True)
         plt_set = self.generatePlotSettingList(fg) # Plot settings are 0 and 1:
         plotLst = plt_set
         # per plot: channel index (relative to channelList) + complex preference (abs or phase) + 
@@ -853,9 +934,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
         vrng = self.ui.readVoltageRangeSpinBox.value()
         corrTm = self.ui.readCorrelationTimeSpinBox.value()
         wrAmp = self.ui.writing_amplitude_SpinBox.value()
+        fftWin = self.getFFTWindowChecks()
 
 
-        elementsLst = [rec_cal_pth,rec_raw_pth,dev_ix,sr,wr,hld_f,vrng,corrTm,wrAmp]
+        elementsLst = [rec_cal_pth,rec_raw_pth,dev_ix,sr,wr,hld_f,vrng,corrTm,wrAmp,fftWin]
 
         stimLst = self.getStiumSettings() # [f,w,oor,lrPhase,r,g,b,prt,linkRGB]
         
@@ -917,6 +999,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.readVoltageRangeSpinBox.setValue(vrng)
         self.ui.readCorrelationTimeSpinBox.setValue(corrTm)
         self.ui.writing_amplitude_SpinBox.setValue(wrAmp)
+        self.setFFTWindowCheck(elementsLst[9])
 
 
 
@@ -929,7 +1012,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def activateRecordingFromMenu(self):
         self.startAll()
-        self.ui.actionRun.setChecked(self.isStarted)
 
     def syncRecordingCbWithMenu(self,toMenu):
         if(toMenu):
@@ -964,6 +1046,82 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.actionProcessed_Data.setChecked(ckd)
         self.ui.actionRaw_data.setChecked(ckd)
         self.syncRecordingCbWithMenu(False)
+
+
+    def resetFFTWindowChecks(self):
+        self.ui.actionNone.setChecked(False)
+        self.ui.actionHamming.setChecked(False)
+        self.ui.actionHanning.setChecked(False)
+        self.ui.actionBlackman.setChecked(False)
+        self.ui.actionBarlett.setChecked(False)
+        self.ui.actionKaiser_14.setChecked(False)
+
+    def getFFTWindowChecks(self): # ... could have used self.sampleInfo here...
+        if(self.ui.actionNone.isChecked()):
+            return FFTWinTp.NONE
+        elif(self.ui.actionHamming.isChecked()):
+            return FFTWinTp.HAM
+        elif(self.ui.actionHanning.isChecked()):
+            return FFTWinTp.HAN
+        elif(self.ui.actionBlackman.isChecked()):
+            return FFTWinTp.BLK
+        elif(self.ui.actionBarlett.isChecked()):
+            return FFTWinTp.BRT
+        elif(self.ui.actionKaiser_14.isChecked()):
+            return FFTWinTp.KAI
+
+    def setFFTWindowCheck(self,win):
+        self.resetFFTWindowChecks()
+        if( win == FFTWinTp.NONE ):
+            self.ui.actionNone.setChecked(True)
+        elif( win == FFTWinTp.HAM ):
+            self.ui.actionHamming.setChecked(True)
+        elif( win == FFTWinTp.HAN ):
+            self.ui.actionHanning.setChecked(True)
+        elif( win == FFTWinTp.BLK ):
+            self.ui.actionBlackman.setChecked(True)
+        elif( win == FFTWinTp.BRT ):
+            self.ui.actionBarlett.setChecked(True)
+        elif( win == FFTWinTp.KAI ):
+            self.ui.actionKaiser_14.setChecked(True)
+        self.sampleInfo.setFFTWin(win)
+
+    @QtCore.pyqtSlot()
+    def setFFTWinNon(self):
+        self.resetFFTWindowChecks()
+        self.ui.actionNone.setChecked(True)
+        self.sampleInfo.setFFTWin(FFTWinTp.NONE)
+
+    @QtCore.pyqtSlot()
+    def setFFTWinHam(self):
+        self.resetFFTWindowChecks()
+        self.ui.actionHamming.setChecked(True)
+        self.sampleInfo.setFFTWin(FFTWinTp.HAM)
+
+    @QtCore.pyqtSlot()
+    def setFFTWinHan(self):
+        self.resetFFTWindowChecks()
+        self.ui.actionHanning.setChecked(True)
+        self.sampleInfo.setFFTWin(FFTWinTp.HAN)
+
+    @QtCore.pyqtSlot()
+    def setFFTWinBlk(self):
+        self.resetFFTWindowChecks()
+        self.ui.actionBlackman.setChecked(True)
+        self.sampleInfo.setFFTWin(FFTWinTp.BLK)
+
+    @QtCore.pyqtSlot()
+    def setFFTWinBrt(self):
+        self.resetFFTWindowChecks()
+        self.ui.actionBarlett.setChecked(True)
+        self.sampleInfo.setFFTWin(FFTWinTp.BRT)
+
+    @QtCore.pyqtSlot()
+    def setFFTWinKai(self):
+        self.resetFFTWindowChecks()
+        self.ui.actionKaiser_14.setChecked(True)
+        self.sampleInfo.setFFTWin(FFTWinTp.KAI)
+
 
 
 app = QtWidgets.QApplication(sys.argv)

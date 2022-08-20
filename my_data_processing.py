@@ -9,11 +9,31 @@ class MyDataProcessing:
         self.allDat = dat
         self.dat = []
 
-    def doFFT(self,f_list,sr): # 2 lists: abs and phase values of fft for frequency in f_list
-        f1 = fft.fft(self.dat )
-        ixi=self.getFrequencyIndex(f_list,np.size(self.dat),sr)
+    def doFFT(self,f_list,sr,win): # 2 lists: abs and phase values of fft for frequency in f_list
+        N = np.size(self.dat)
+        dat = self.dat
+        if(win != FFTWinTp.NONE):
+            dat = self.applyWindow(dat,N,win)
+        f1 = fft.fft( self.dat )
+        ixi=self.getFrequencyIndex(f_list,N,sr)
         fres = f1[ixi]
         return fres
+
+    def applyWindow(self,dat,N,win):
+
+        if( win == FFTWinTp.HAM ): # according to order in MainWindow Menu
+            wDat = np.hamming(N)
+        elif( win == FFTWinTp.HAN ):
+            wDat = np.hanning(N)
+        elif( win == FFTWinTp.BLK ):
+            wDat = np.blackman(N)
+        elif( win == FFTWinTp.BRT ):
+            wDat = np.bartlett(N)
+        else: #( win == FFTWinTp.KAI ):
+            wDat = np.kaiser(N,14)
+        dat = np.copy(dat)
+        dat = np.multiply(dat,wDat)
+
 
     def getFrequencyIndex(self,f_list,ss,sr):
         fft_freq = fft.fftfreq(ss)*sr
@@ -24,6 +44,10 @@ class MyDataProcessing:
             ixi[i] = ix[0][0]
         ixi = ixi.astype(int)
         return ixi
+
+    def doDivision(self,nDat1,nDat2):
+        #return np.divide(nDat1,nDat2)
+        return np.divide(nDat2,nDat1)
 
     def doCorrelationHist(self,nDat1,nDat2,ix1,ix2,histDat):
         # nDat can have multiple channels...
@@ -73,7 +97,7 @@ class MyDataProcessing:
         if( tp==0 ):
             return self.getRaw()
         elif( tp == 1 ):
-            return self.doFFT( channelSampleInfo.get_f_list(), channelSampleInfo.getSampleRate() ) # according to frequencies in function generator
+            return self.doFFT( channelSampleInfo.get_f_list(), channelSampleInfo.getSampleRate(), channelSampleInfo.getFFTWin() ) # according to frequencies in function generator
         elif(tp == 2):
             return self.doCorrelation(self.allDat[ix2])
         elif(tp == 3): # mean
@@ -82,7 +106,8 @@ class MyDataProcessing:
             return self.doMax()
         elif(tp == 5): # min
             return self.doMin()
-        
+        #elif(tp == 6): # Division
+        #    return self.doDivision()
         return []
 
     def processData2ndDegree(self,tp,nDat1,nDat2,ixRef,histDat):
@@ -90,7 +115,10 @@ class MyDataProcessing:
             nDat1=np.abs(nDat1)
             nDat2=np.abs(nDat2)
             return self.doCorrelationHist(nDat1,nDat2,ixRef[0],ixRef[1],histDat)
-
+        elif(tp == 6): # Division
+            nDat1=np.abs(nDat1)
+            nDat2=np.abs(nDat2)
+            return self.doDivision(nDat1,nDat2)
 # #dp = MyDataProcessing(np.zeros(shape=(40)))
 # dp = MyDataProcessing(np.random.rand(40))
 # ff = dp.doFFT([500,1000],3000)

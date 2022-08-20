@@ -17,13 +17,14 @@ class FunctionGen:
         self.v_pp = v_pp
         self.calculateSignal()
 
-    def calculateSignal(self):
+    def calculateSignal(self,leaveSR=False):
         if(np.size(self.f_list)<1):
             return
 
         f_mn = self.f_list[0]
         f_mx = self.f_list[-1]
-        self.sampleRate = f_mx*5
+        if(not leaveSR):
+            self.sampleRate = f_mx*5
         n_samples = self.sampleRate/f_mn
         #print([self.sampleRate,n_samples])
         if(n_samples>self.n_max):
@@ -59,11 +60,11 @@ class FunctionGen:
 
     def set_v_pp(self,v_pp):
         self.v_pp = v_pp
-        self.calculateSignal()
+        self.calculateSignal(True)
 
     def set_sample_rate(self,sr):
         self.sampleRate = sr
-        self.calculateSignal()
+        self.calculateSignal(True)
 
     def getDataSize(self):
         if(self.signal is None):
