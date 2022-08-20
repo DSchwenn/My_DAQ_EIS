@@ -246,7 +246,7 @@
             <x>20</x>
             <y>90</y>
             <width>271</width>
-            <height>91</height>
+            <height>211</height>
            </rect>
           </property>
           <property name="alternatingRowColors">
@@ -273,7 +273,7 @@
           <property name="geometry">
            <rect>
             <x>20</x>
-            <y>190</y>
+            <y>310</y>
             <width>75</width>
             <height>23</height>
            </rect>
@@ -286,7 +286,7 @@
           <property name="geometry">
            <rect>
             <x>210</x>
-            <y>250</y>
+            <y>370</y>
             <width>75</width>
             <height>23</height>
            </rect>
@@ -299,7 +299,7 @@
           <property name="geometry">
            <rect>
             <x>20</x>
-            <y>220</y>
+            <y>340</y>
             <width>271</width>
             <height>22</height>
            </rect>
@@ -314,7 +314,7 @@
           <property name="geometry">
            <rect>
             <x>210</x>
-            <y>190</y>
+            <y>310</y>
             <width>75</width>
             <height>23</height>
            </rect>
@@ -327,7 +327,7 @@
           <property name="geometry">
            <rect>
             <x>20</x>
-            <y>250</y>
+            <y>370</y>
             <width>171</width>
             <height>22</height>
            </rect>
@@ -372,7 +372,7 @@
           <property name="geometry">
            <rect>
             <x>140</x>
-            <y>300</y>
+            <y>420</y>
             <width>141</width>
             <height>20</height>
            </rect>
@@ -385,7 +385,7 @@
           <property name="geometry">
            <rect>
             <x>140</x>
-            <y>320</y>
+            <y>440</y>
             <width>141</width>
             <height>22</height>
            </rect>
@@ -407,7 +407,7 @@
           <property name="geometry">
            <rect>
             <x>140</x>
-            <y>350</y>
+            <y>470</y>
             <width>141</width>
             <height>20</height>
            </rect>
@@ -420,7 +420,7 @@
           <property name="geometry">
            <rect>
             <x>140</x>
-            <y>370</y>
+            <y>490</y>
             <width>141</width>
             <height>22</height>
            </rect>
@@ -1624,6 +1624,7 @@
      <string>Sampling</string>
     </property>
     <addaction name="actionRun"/>
+    <addaction name="actionReset_plots"/>
    </widget>
    <widget class="QMenu" name="menuRecording">
     <property name="title">
@@ -1756,6 +1757,11 @@
    </property>
    <property name="text">
     <string>Kaiser 14</string>
+   </property>
+  </action>
+  <action name="actionReset_plots">
+   <property name="text">
+    <string>Reset plots</string>
    </property>
   </action>
  </widget>

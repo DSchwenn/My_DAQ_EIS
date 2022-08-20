@@ -113,7 +113,8 @@ class QtMatLibPlotHandler(FigureCanvasQTAgg,threading.Thread):
             tdat_y = np.empty(nchn[1]*ndata) # different yval for all plots
             tdat_y[:] = np.NaN
             self.axes.plot(tdat_x, tdat_y, label=nm)
-        self.axes.legend()
+        #self.axes.legend(bbox_to_anchor=(1.1, 1.05))
+        self.axes.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
 
 
@@ -138,6 +139,7 @@ class QtMatLibPlotHandler(FigureCanvasQTAgg,threading.Thread):
         pref = self.sampleInfo.getComplexPref( self.plotIndex )
         if(pref==1):
             dat = np.angle(dat)
+            dat[dat<0] = dat[dat<0]+np.pi
         else:
             dat = np.abs(dat)
         return dat
@@ -243,4 +245,6 @@ class QtMatLibPlotHandler(FigureCanvasQTAgg,threading.Thread):
         self.smpl_count = self.smpl_count+1
         if( self.smpl_count>= ndata ):
             self.smpl_count = 0
+        
+        #self.axes.legend(bbox_to_anchor=(1.1, 1.05))
 

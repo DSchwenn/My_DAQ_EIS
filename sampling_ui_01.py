@@ -27,6 +27,8 @@ from channel_sample_info import *
 import traceback
 import pickle
 
+from wakepy import set_keepawake, unset_keepawake
+
 # Compile Workaround
 # "C:\Users\DSchwenn\anaconda3\python.exe" "c:\Users\DSchwenn\.vscode\extensions\seanwu.vscode-qt-for-python-1.3.7/python/scripts/uic.py" -o "d:\Google Drive\MyData\MyEIS\pycode\qt_for_python\uic\sampling_ui_01.py" "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.ui"  
 # required pip install pyqt5-tools from anaconda console...
@@ -71,6 +73,8 @@ import pickle
 #
 # k Add windowing to FFT ~ slect via menu
 # ?: Plot data over frequency?g
+#        -> per frequency plot current, mean and SD over some time (corr   hist?)
+# ?: Difference of phase?
 
 
 class MyMainWindow(QtWidgets.QMainWindow):
@@ -222,9 +226,13 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.actionBlackman.triggered.connect(self.setFFTWinBlk)
         self.ui.actionBarlett.triggered.connect(self.setFFTWinBrt)
         self.ui.actionKaiser_14.triggered.connect(self.setFFTWinKai)
+        self.ui.actionReset_plots.triggered.connect(self.updateTopPlotDistribution)
 
 
         # gogogo
+        set_keepawake(keep_screen_awake=False)
+        # do stuff that takes long time -> unset_keepawake()
+
         self.ui.start_device_pb.clicked.connect(self.startAll)
         self.populateWriteList()
 
@@ -485,6 +493,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.btmplot.join()
         self.topplot.join()
 
+        unset_keepawake()
+
+
     @QtCore.pyqtSlot()
     def updateTab(self):
         ix = self.ui.tabWidget.currentIndex()
@@ -536,9 +547,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
         if("Corr" in type and len(ref) == 2):
             ter = ""
             ch = "Corr " + str(ref)
+        elif("Div" in type and len(ref) == 2):
+            ter = ""
+            ch = "Div " + str(ref[0]) + "/" + str(ref[1])
         self.readChannels.append([ch, ter, type, ref])
 
-        print(self.readChannels)
+        #print(self.readChannels)
 
         self.readUpdateChannelList()
         self.updatePlotLists()
@@ -693,9 +707,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
     def readUpdateTerminalRef(self):
         ix_dev = self.ui.device_comboBox.currentIndex()-1
         ix_ch = self.ui.readChannelcomboBox.currentIndex()
+        ix_term = self.ui.terminaCVonfiguration_comboBox.currentIndex()
         terms = self.devicesInfo.getTerminalConfig(ix_dev, ix_ch)
         self.ui.terminaCVonfiguration_comboBox.clear()
         self.ui.terminaCVonfiguration_comboBox.addItems(terms)
+        if(ix_term < len(terms)):
+            self.ui.terminaCVonfiguration_comboBox.setCurrentIndex(ix_term)
 
     # Device selection function
 
@@ -723,6 +740,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             # print(tStr)
             self.ui.write_frequencies_list.addItem(tStr)
         self.updateFrequencies()
+        self.forcePlotUpdate()
 
     @QtCore.pyqtSlot()
     def writingAddFrequency(self):
@@ -733,6 +751,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.writingPhase.append(p)
         self.writingAmplitude.append(a)
         self.updateFrequencyList()
+        self.updatePlotLists()
 
     def updateFrequencies(self):
         if(self.ui.device_hold_checkBox.isChecked):
@@ -748,6 +767,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         del self.writingPhase[val]
         del self.writingAmplitude[val]
         self.updateFrequencyList()
+        self.updatePlotLists()
 
     @QtCore.pyqtSlot()
     def writingClearFrequencies(self):
