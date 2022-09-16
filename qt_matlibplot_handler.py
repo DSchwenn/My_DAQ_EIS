@@ -113,8 +113,9 @@ class QtMatLibPlotHandler(FigureCanvasQTAgg,threading.Thread):
             tdat_y = np.empty(nchn[1]*ndata) # different yval for all plots
             tdat_y[:] = np.NaN
             self.axes.plot(tdat_x, tdat_y, label=nm)
-        #self.axes.legend(bbox_to_anchor=(1.1, 1.05))
+        #self.axes.legend()
         self.axes.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        self.draw()
 
 
 

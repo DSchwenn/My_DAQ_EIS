@@ -16,7 +16,7 @@ from data_history_storage import *
 
 
 class NiDataHandler:
-    def __init__(self,sampleInfo):
+    def __init__(self,sampleInfo,serialCom = None):
         self.dataCallbacks = []
         self.dataCallbacksChannels = []
         self.sampleRate = 100.0
@@ -40,6 +40,9 @@ class NiDataHandler:
 
         self.ms_init = int(round(time.time() * 1000))
         self.histDat = DataHistoryStorage(sampleInfo)
+
+        self.ser_com = serialCom
+
 
     # override utilizting self.sampleInfo
     def setupSampling_si(self,ch_ref_type):
@@ -101,12 +104,15 @@ class NiDataHandler:
         self.dat_type = []
         for lne in self.ch_ref_type:
             tpe = self.sampleInfo.type2num(lne[2])
+            ix = -1
             if( lne[0] in chn): # only add channels once...
                 ix = chn.index(lne[0])
-            elif(not "Corr" in lne[0]): # if correlation -> channel is not for reading
+            elif( (not "Corr" in lne[0]) and (not "Div" in lne[0]) and (not "Ser" in lne[0])): # if correlation -> channel is not for reading
                 ix = len(chn)
                 chn.append(lne[0])
                 ref.append(lne[1])
+            elif( "Ser" in lne[0]):
+                ix = lne[3][0]
             self.channelIxi.append( ix )
             self.channelRefIxi.append( lne[3] )
             self.dat_type.append(tpe)
@@ -150,10 +156,12 @@ class NiDataHandler:
 
 
 
-    def distributeData(self,dat):
+    def distributeData(self,dat,datSerial):
         #1 # TODO: process channels according to ch_ref_type[2] & distribute
         #print(str(type(dat)) + " " + str(dat.size) + " " + str(dat.shape))
         #sz = dat.shape
+
+        # TODO: datSerial as additional channels in calculated data if Serial channel was selected
         
         # prepare all data -> get full list of used channel <-> data type pairs -> process       
         dp = MyDataProcessing(dat)
@@ -166,8 +174,11 @@ class NiDataHandler:
             if( self.sampleInfo.isChannelUsed(i) and len(ix2)<2 ): # do not process channels with 2 references (correlation or division of 2 results)
                 ix = self.channelIxi[i] # index in dat
                 tp = self.dat_type[i] # processing type
-                # process data
-                dat2 = dp.processData(tp,ix,ix2,self.sampleInfo) # TODO: to correlate FFT resultswith other fft results (? or raw), trhis must be iomplemented here - requires fft channel data buffer of N - N=??
+                if( tp == 7 ): # Serial data
+                    dat2 = datSerial[ix] # 0 is time...
+                else:
+                    # process data
+                    dat2 = dp.processData(tp,ix,ix2,self.sampleInfo) # TODO: to correlate FFT resultswith other fft results (? or raw), trhis must be iomplemented here - requires fft channel data buffer of N - N=??
                 usedData.append(dat2)
                 usedChannels.append(i)
         
@@ -213,14 +224,23 @@ class NiDataHandler:
             return
         #self.sampleInfo.setDataReadingStatus(True)
         #cnt = 0
+        datSer = []
+
         dat = self.ni_reader.getData()
+        if( self.ser_com is not None  ):
+            datSer = self.ser_com.getData(self.ni_reader.bufferSize(),self.sampleInfo.getprocessSR())
+
         while( dat is not None and self.ni_reader is not None ):
             #cnt = cnt+1
             #if(self.ni_reader.bufferSize < 1):
             #    self.sampleInfo.setDataReadingStatus(False)
-            self.distributeData(dat)
+            self.distributeData(dat,datSer)
             dat = self.ni_reader.getData()
-        
+            if( self.ser_com is not None  ):
+                datSer = self.ser_com.getData(self.ni_reader.bufferSize(),self.sampleInfo.getprocessSR())
+
+        if( self.ser_com is not None  ):
+            self.ser_com.resetData()
 
         #ms = int(round(time.time() * 1000))-self.ms_init
         #print("Distri: "+str(ms)+" "+str(cnt))

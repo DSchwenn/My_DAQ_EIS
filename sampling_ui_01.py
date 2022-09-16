@@ -13,7 +13,7 @@ from checkablecombobox import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-from qt_for_python.uic.sampling_ui_01 import *
+from qt_for_python.uic.sampling_ui import *
 from function_gen import *
 from daq_device_infos import *
 from qt_matlibplot_handler import *
@@ -29,7 +29,7 @@ import pickle
 
 from wakepy import set_keepawake, unset_keepawake
 
-# Compile Workaround
+# Compile Workaround: pyuic5 -o qt_for_python/uic/sampling_ui.py sampling_ui.ui
 # "C:\Users\DSchwenn\anaconda3\python.exe" "c:\Users\DSchwenn\.vscode\extensions\seanwu.vscode-qt-for-python-1.3.7/python/scripts/uic.py" -o "d:\Google Drive\MyData\MyEIS\pycode\qt_for_python\uic\sampling_ui_01.py" "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.ui"  
 # required pip install pyqt5-tools from anaconda console...
 # "C:\Users\DSchwenn\anaconda3\python.exe" "C:/Users/DSchwenn/anaconda3/Lib/site-packages/qtpy/uic.py" -o "d:\Google Drive\MyData\MyEIS\pycode\qt_for_python\uic\sampling_ui_01.py" "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.ui"  
@@ -75,6 +75,87 @@ from wakepy import set_keepawake, unset_keepawake
 # ?: Plot data over frequency?g
 #        -> per frequency plot current, mean and SD over some time (corr   hist?)
 # ?: Difference of phase?
+#
+# k? Stimuilus: unselcted (after loading) -> set -> Crash
+# current strong...
+# k With VM serial.serialutil.SerialException: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+# 
+# Check multiple positions on head as reference...
+# Try AC decoupled Current source.
+# Crosstalk/ Ghosing - TODO: reduce resistance of AA filter to make ai0 less high ohm... - remove aa? Alt: impedance convertion...
+# ?? is the uC crossing over to the AO??? -> AO to Ai0...
+#
+# Nicht im AO. Aber in Stromquellen-Spannung. Störung inkluisive DC shift...
+# Licht mit Akkubox: Besser, aber Synmc Spannung verrauscht...
+
+
+#     self.updatePlotList(self.topplot.getIndex(), self.ui.top_plot_primary_comboBox,
+#   File "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.py", line 600, in updatePlotList
+#     updFkt()  # updates self.sampleInfo to get legend
+#   File "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.py", line 678, in updateTopPlotDistribution
+#     self.UpdateChannelSampleInfo()
+#   File "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.py", line 298, in UpdateChannelSampleInfo
+#     plotSettingList = self.generatePlotSettingList(fg)
+#   File "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.py", line 425, in generatePlotSettingList
+#     tchList = self.generatePlotSettingListAbstr(fg, self.ui.btm_plot_primary_comboBox, self.ui.btm_plot_processing_comboBox, self.ui.btm_show_toolbar_checkBox,
+#   File "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.py", line 317, in generatePlotSettingListAbstr
+#     chnInfo = self.readChannels[chn[0]]
+# IndexError: list index out of range
+
+# After refresh after just plugging in DAQ
+#
+#  File "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.py", line 757, in deviceUpdateDeviceInfo
+#     info = self.devicesInfo.getDeviceInfo(ix-1)
+#   File "d:\Google Drive\MyData\MyEIS\pycode\daq_device_infos.py", line 73, in getDeviceInfo
+#     info += "Max sample rate: " + str(device.ai_max_multi_chan_rate) + "Hz\n"
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\nidaqmx\system\device.py", line 695, in ai_max_multi_chan_rate
+#     check_for_error(error_code)
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\nidaqmx\errors.py", line 127, in check_for_error
+#     raise DaqError(error_buffer.value.decode("utf-8"), error_code)
+# nidaqmx.errors.DaqError: The specified device is not present or is not active in the system. The device may not be installed on this system, may have been unplugged, or may not be installed correctly.
+# Device:  Dev1
+
+# Changing channel from div to FFT then(?) changing ABS to Phase or before that:
+# Traceback (most recent call last):
+#   File "C:\Users\DSchwenn\anaconda3\lib\threading.py", line 932, in _bootstrap_inner
+#     self.run()
+#   File "d:\Google Drive\MyData\MyEIS\pycode\qt_matlibplot_handler.py", line 73, in run
+#     self.draw()
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\backends\backend_agg.py", line 407, in draw
+#     self.figure.draw(self.renderer)
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\artist.py", line 41, in draw_wrapper
+#     return draw(artist, renderer, *args, **kwargs)
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\figure.py", line 1863, in draw
+#     mimage._draw_list_compositing_images(
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\image.py", line 131, in _draw_list_compositing_images
+#     a.draw(renderer)
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\artist.py", line 41, in draw_wrapper
+#     return draw(artist, renderer, *args, **kwargs)
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\cbook\deprecation.py", line 411, in wrapper
+#     return func(*inner_args, **inner_kwargs)
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\axes\_base.py", line 2707, in draw
+#     self._update_title_position(renderer)
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\axes\_base.py", line 2636, in _update_title_position
+#     if (ax.xaxis.get_ticks_position() in ['top', 'unknown']
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\axis.py", line 2207, in get_ticks_position
+#     self._get_ticks_position()]
+#   File "C:\Users\DSchwenn\anaconda3\lib\site-packages\matplotlib\axis.py", line 1893, in _get_ticks_position
+#     minor = self.minorTicks[0]
+# IndexError: list index out of range
+# Error with read_many_sample
+
+# Anti aliasing?
+# Corr header with 4 channels -> only 1st...
+
+# Stim: flashy rect mode!
+# Longer recordings sham & non sham
+
+# Future:
+#  Another output channel -> current source
+#  Find interesting measurement positions... literature?
+#  More diff V amplifiers -> 2-3 differential... switch to RSE?
+#  Additional data?: Heart rate? Acceleration (3 channels though...)?
+# Training: Psy movement instruction as reference channel
 
 
 class MyMainWindow(QtWidgets.QMainWindow):
@@ -119,7 +200,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.updateTab)  # Read Tab: update combos
         self.ui.readChannelcomboBox.currentIndexChanged.connect(
             self.readUpdateTerminalRef)
-
+        self.ui.channelDataTypeComboBox.currentIndexChanged.connect(self.readDataTypeUpdt)
         self.ui.readAddChannelPushButton.clicked.connect(self.readAddChannel)
         self.ui.readRemovePushButton.clicked.connect(self.readRemoveChannel)
         self.ui.readClearPushButton.clicked.connect(self.readClearList)
@@ -174,6 +255,15 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.updateBtmPlotDistribution)
 
 
+        # Serial/ uC
+        self.ui.stimRefreshSerialpushButton.clicked.connect(self.refreshSerialList)
+        self.ui.stimSetpushButton.clicked.connect(self.setData2uC)
+        self.ui.stimLinkRGBBrightcheckBox.stateChanged.connect(self.updateRGBStatus)
+        self.ui.stimBrughtRspinBox.valueChanged.connect(self.updateRGBStatus)
+        self.ui.stimClosepushButton.clicked.connect(self.closeData2uC)
+        self.sc = SerialuCCom()
+        self.refreshSerialList()
+
         # plot graphs
         # TODO: inject matlibplots in top_plt_widget and btm_plt_widget
         self.sampleInfo = ChannelSampleInfo()
@@ -190,7 +280,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.sampleInfo.addRecipient(self.btmplot.updateData, plotIndex=self.btmplot.getPlotIndex())
         self.sampleInfo.addRecipient(self.raw_recorder.updateData, plotIndex=self.raw_recorder.getPlotIndex())
         self.sampleInfo.addRecipient(self.calc_recorder.updateData, plotIndex=self.calc_recorder.getPlotIndex())
-        self.datahandler = NiDataHandler(self.sampleInfo)
+        self.datahandler = NiDataHandler(self.sampleInfo,self.sc)
         # Not aniline... timer to read buffer in data handler -> call plot updates via callback
 
 
@@ -203,14 +293,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.select_raw_folder_pushButton.clicked.connect(self.getRawPath)
 
 
-        # Serial/ uC
-        self.ui.stimRefreshSerialpushButton.clicked.connect(self.refreshSerialList)
-        self.ui.stimSetpushButton.clicked.connect(self.setData2uC)
-        self.ui.stimLinkRGBBrightcheckBox.stateChanged.connect(self.updateRGBStatus)
-        self.ui.stimBrughtRspinBox.valueChanged.connect(self.updateRGBStatus)
-        self.ui.stimClosepushButton.clicked.connect(self.closeData2uC)
-        self.sc = SerialuCCom()
-        self.refreshSerialList()
+
 
         # Menu items
         self.ui.actionLoad_settings.triggered.connect(self.loadSettings)
@@ -322,6 +405,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
                     chnInfoS3 = chnInfo3[2][0]
                     if((chnInfoS2=='F') or (chnInfoS3=='F')):
                         nData = [fg.getNofF(), 1]
+            elif(chnInfoS == 'A'):
+                nData = [5, 1]
             else:
                 nData = [1, 1]
 
@@ -381,6 +466,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 if(ch[2][0] == 'F' or ch[2][0] == 'D'):
                     chn.append(ix)
                     chCount = chCount+nn
+                elif(ch[2][0] == 'A'):
+                    chn.append(ix)
+                    chCount = chCount+5
                 elif(ch[2][0] != 'R' ): #ch[2][0] == 'C' ):
                     chn.append(ix)
                     chCount = chCount+1
@@ -468,13 +556,19 @@ class MyMainWindow(QtWidgets.QMainWindow):
         linkRGB = self.ui.stimLinkRGBBrightcheckBox.isChecked()
         prt = self.ui.stimSerialcomboBox.currentIndex()
 
-        return [f,w,oor,lrPhase,r,g,b,prt,linkRGB]
+        stdF = self.ui.stimFrequencySTDdoubleSpinBox.value()
+        stdOOR = self.ui.stimOnOffRatioSTDdoubleSpinBox.value()
+        stdBrgt = self.ui.stimBrughtSTDdoubleSpinBox.value()
+
+        flashMs = self.ui.stimFlashspinBox.value()
+
+        return [f,w,oor,lrPhase,r,g,b,prt,linkRGB,stdF,stdOOR,stdBrgt,flashMs]
 
     @QtCore.pyqtSlot()
     def setData2uC(self):
         dat = self.getStiumSettings()
         port = self.ui.stimSerialcomboBox.currentText()
-        self.sc.sendMessage(port,dat[0],dat[1],dat[2],dat[3],dat[4],dat[5],dat[6])
+        self.sc.sendMessage(port,dat[0],dat[1],dat[2],dat[3],dat[4],dat[5],dat[6],dat[9],dat[10],dat[11],dat[12])
 
     # general callbacks
 
@@ -482,6 +576,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         print("Closing main window")
         if(self.datahandler.isRunnung() or self.isStarted):
             self.startAll()
+
+
+        self.sc.killConnection()
 
         self.raw_recorder.killThread()
         self.raw_recorder.join()
@@ -492,6 +589,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.btmplot.stopPlotting()
         self.btmplot.join()
         self.topplot.join()
+
+        self.sc.join()
 
         unset_keepawake()
 
@@ -536,6 +635,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
             ref = [x.row() for x in self.ui.readChannelList.selectedIndexes()]
             if(ref == []):
                 ref = [self.ui.readChannelList.currentRow()]
+        elif("Serial" in type):
+            ref = [self.ui.readSerialIXspinBox.value()]
+
         if(ref[0] < 0):
             QMessageBox.about(self, "Adding Corr type channel",
                               "For this channel type, one valid reference must be selected to correlate raw data - 2 entries to correlate against each other.")
@@ -544,15 +646,24 @@ class MyMainWindow(QtWidgets.QMainWindow):
             QMessageBox.about(self, "Adding Corr type channel",
                               "For this channel type, a maximum of 2 channels to correlate may be selected.")
             return
+
+
         if("Corr" in type and len(ref) == 2):
             ter = ""
             ch = "Corr " + str(ref)
         elif("Div" in type and len(ref) == 2):
             ter = ""
             ch = "Div " + str(ref[0]) + "/" + str(ref[1])
+        elif( "Serial" in type ):
+            ter = ""
+            ch = "Serial " + str(ref)
+        elif( "Acc" in type ):
+            ter = ""
+            ch = "Acc/HR(uC)"
+
         self.readChannels.append([ch, ter, type, ref])
 
-        #print(self.readChannels)
+        print(self.readChannels)
 
         self.readUpdateChannelList()
         self.updatePlotLists()
@@ -704,6 +815,14 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.updatePlotLists()
 
     @QtCore.pyqtSlot()
+    def readDataTypeUpdt(self):
+        txt = self.ui.channelDataTypeComboBox.currentText()
+        if( "Serial" in txt ):
+            self.ui.readSerialIXspinBox.setEnabled(True)
+        else:
+            self.ui.readSerialIXspinBox.setEnabled(False)
+
+    @QtCore.pyqtSlot()
     def readUpdateTerminalRef(self):
         ix_dev = self.ui.device_comboBox.currentIndex()-1
         ix_ch = self.ui.readChannelcomboBox.currentIndex()
@@ -839,12 +958,26 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.ui.device_hold_checkBox.setEnabled(True)
             self.ui.actionRun.setChecked(False)
 
+    def setupSerial(self):
+        for ch in self.readChannels:
+            if( "Serial" in ch[2] ):
+                port = self.ui.stimSerialcomboBox.currentText()
+                if( not self.sc.startSerialReading(port)):
+                    print("Failed opening serial connection: serial channel(s) will read zero.")
+                #else:
+                #    time.sleep(0.1) # allow serial to get some data
+                return
+        # is there Serial channel?
+        # Try self.sc.startSerialReading(port) if so
+        
+
     @QtCore.pyqtSlot()
     def startAll(self):
 
         try:
             if(self.datahandler.isRunnung() or self.isStarted):
                 self.datahandler.stopSamplingAndWriting()
+                self.sc.stopSerialReading()
                 self.isStarted = False
                 self.changeUIStartStop(False)
                 return
@@ -866,6 +999,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.UpdateChannelSampleInfo()
             self.datahandler.setupSampling_si(self.readChannels)
             self.datahandler.setupWriting_si([0])
+            self.setupSerial()
 
             self.datahandler.startSamplingAndWriting()
 
@@ -999,6 +1133,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
         b = stimLst[6]
         prt = stimLst[7]
         linkRGB = stimLst[8]
+        stdF =  stimLst[9]
+        stdOOR =  stimLst[10]
+        stdBrgt =  stimLst[11]
+        flashMs = stimLst[12]
 
         self.ui.stimFrequencydoubleSpinBox.setValue(f)
         self.ui.stimWaveformcomboBox.setCurrentIndex(w)
@@ -1010,7 +1148,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
         if(prt<self.ui.stimSerialcomboBox.count()):
             self.ui.stimSerialcomboBox.setCurrentIndex(dev_ix)
         self.ui.stimLinkRGBBrightcheckBox.setChecked(linkRGB)
-
+        self.ui.stimFrequencySTDdoubleSpinBox.setValue(stdF)
+        self.ui.stimOnOffRatioSTDdoubleSpinBox.setValue(stdOOR)
+        self.ui.stimBrughtSTDdoubleSpinBox.setValue(stdBrgt)
+        self.ui.stimFlashspinBox.setValue(flashMs)
 
         # More UI
         vrng = elementsLst[6]

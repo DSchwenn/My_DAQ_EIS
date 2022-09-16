@@ -128,9 +128,13 @@ class MyFileWriter(threading.Thread):
         while( len(self.sampleBuffer)>0 ):
             tDt = self.sampleBuffer.pop(0)
             sz = np.shape(tDt)
+            n = sz[0]-1
             for rw in range(sz[1]):
                 for col in range(sz[0]):
-                    txt += str(tDt[col][rw]) + self.separator
+                    #txt += str(tDt[col][rw])
+                    txt += f'{tDt[col][rw]:.4e}'
+                    if(col < n):
+                        txt += self.separator
                 txt += "\n"
 
         self.f.write(txt)
@@ -142,13 +146,19 @@ class MyFileWriter(threading.Thread):
 
         while( len(self.sampleBuffer)>0 ):
             tDt = self.sampleBuffer.pop(0)
-            for dt in tDt:
+            n = len(tDt)-1
+            for i1,dt in enumerate(tDt):
                 if(np.size(dt)>1):
-                    for ddt in dt:
-                        txt += str(ddt) + self.separator
+                    nn = len(dt)-1
+                    for i2,ddt in enumerate(dt):
+                        txt += f'{ddt:.4e}'
+                        if(i2<nn):
+                            txt += self.separator
                 else:
-                    txt += str(dt) + self.separator
-                txt += "\n"
+                    txt += f'{dt:.4e}'
+                if(i1<n):
+                    txt += self.separator
+            txt += "\n"
 
         self.f.write(txt)
 

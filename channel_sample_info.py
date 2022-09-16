@@ -29,6 +29,7 @@ class ChannelSampleInfo:
         self.datareading = False
         self.corrTime = 2.
         self.fftWinType = 0
+        
 
 
     def addRecipient(self,callbackFkt,plotIndex):
@@ -81,6 +82,7 @@ class ChannelSampleInfo:
         
         corrWithFFT = 0
         divWithFFT = 0
+        txt1 = ""
         if(len(ci)>0 and (ci[2][0] == 'C' or ci[2][0] == 'D') ):
             ch1 = ci[3][0]
             ch2 = ci[3][1]
@@ -88,15 +90,26 @@ class ChannelSampleInfo:
             ci2 = self.channelList[ch2]
             if( ci[2][0] == 'C'  and (ci1[2][0] == 'F') !=  (ci2[2][0] == 'F') ): # if only one of them is FFT (otherwise means will be used)
                 corrWithFFT = 1
+                txt1 = "Cor:" + str(ch1) + "," + str(ch2) + " "
             elif( ci[2][0] == 'D'  and (ci1[2][0] == 'F') or  (ci2[2][0] == 'F') ):
                 divWithFFT = 1
+                txt1 = "Div:" + str(ch2) + "/" + str(ch1) + " "
 
         legend = []
         # 2 cases: 1 or N sample per channel, one channel -> one legend entry
         #           1 sample  for N channels - one channel pre frequency -> N legend entries
         if(len(ci)>0 and (ci[2][0] == 'F' or corrWithFFT or divWithFFT)): #nDat>1):  -> only add frequency for FFT...
             for f in f_list:
-                tstr = ci[0] + " " + str(f) + "Hz"
+                if( corrWithFFT or divWithFFT ):
+                    tstr = txt1 + str(f) + "Hz"
+                else:
+                    tstr = ci[0] + " " + str(f) + "Hz"
+                tstr = self.addHeaderInfo(tstr,ci,forHeader)
+                legend.append(tstr)
+        elif(len(ci)>0 and ci[2][0] == 'A'):
+            tlst = ["HR red","HR IR","Acc X","Acc Y","Acc Z"]
+            for s in tlst:
+                tstr = ci[0] + " " + s
                 tstr = self.addHeaderInfo(tstr,ci,forHeader)
                 legend.append(tstr)
         elif(len(ci)>0):
@@ -125,6 +138,8 @@ class ChannelSampleInfo:
                 return 5
             else: # Mean
                 return 3
+        elif( typeStr[0] == 'S' ): # Serial
+            return 7
         else: # Raw
             return 0
 
@@ -157,6 +172,7 @@ class ChannelSampleInfo:
     def allChannelNeedUpdate(self):
         for i in range(len(self.channelUpdateRequest)):
             self.channelUpdateRequest[i] = True
+        #print( "All set: " + str(self.channelUpdateRequest) )
 
     def channelNeedsUpdate(self,ix):
         if( ix>=len(self.channelUpdateRequest) ):
@@ -171,7 +187,7 @@ class ChannelSampleInfo:
     def resetChannelUpdateFlag(self,ix):
         if( len(self.channelUpdateRequest)<=ix ):
             return
-
+        #print( "Reset: " + str(ix) + " " + str(self.channelUpdateRequest) )
         self.channelUpdateRequest[ix] = False
 
     def getChannelInfo(self,ix):
@@ -236,6 +252,9 @@ class ChannelSampleInfo:
         if(self.functionGen is None):
             return 150
         return self.functionGen.getDataSize()
+
+    def getprocessSR(self):
+        return self.getSampleRate()/self.getDataSize()
 
     def getFunctionGen(self):
         return self.functionGen

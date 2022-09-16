@@ -1,6 +1,6 @@
 {
     "qtForPython.designer.path": "C:\\Users\\DSchwenn\\anaconda3\\Library\\bin\\designer.exe",
-    "qtForPython.uic.path": null,
+    "qtForPython.uic.path": "",
     "qtForPython.uic.args": [
         "-o \"${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}uic${pathSeparator}${fileBasenameNoExtension}.py\""
     ],
