@@ -33,7 +33,7 @@
          <bool>true</bool>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>7</number>
         </property>
         <widget class="QWidget" name="device_tab">
          <attribute name="title">
@@ -1330,7 +1330,7 @@
           </property>
          </widget>
         </widget>
-        <widget class="QWidget" name="tab">
+        <widget class="QWidget" name="stimulus_tab">
          <attribute name="title">
           <string>Stimulus</string>
          </attribute>
@@ -1764,6 +1764,346 @@
           </property>
           <property name="maximum">
            <number>1000</number>
+          </property>
+         </widget>
+        </widget>
+        <widget class="QWidget" name="training_tab">
+         <attribute name="title">
+          <string>NNTrain</string>
+         </attribute>
+         <widget class="QLabel" name="label_38">
+          <property name="geometry">
+           <rect>
+            <x>30</x>
+            <y>40</y>
+            <width>121</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Target mode</string>
+          </property>
+         </widget>
+         <widget class="QComboBox" name="train_target_mode_comboBox">
+          <property name="geometry">
+           <rect>
+            <x>160</x>
+            <y>40</y>
+            <width>171</width>
+            <height>25</height>
+           </rect>
+          </property>
+          <item>
+           <property name="text">
+            <string>2D cardinal</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>2D any</string>
+           </property>
+          </item>
+         </widget>
+         <widget class="QLabel" name="label_39">
+          <property name="geometry">
+           <rect>
+            <x>39</x>
+            <y>80</y>
+            <width>281</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Use channels for training:</string>
+          </property>
+         </widget>
+         <widget class="QWidget" name="verticalLayoutWidget_3">
+          <property name="geometry">
+           <rect>
+            <x>39</x>
+            <y>110</y>
+            <width>271</width>
+            <height>31</height>
+           </rect>
+          </property>
+          <layout class="QVBoxLayout" name="train_comboBoxWidgetLayout">
+           <property name="sizeConstraint">
+            <enum>QLayout::SetMaximumSize</enum>
+           </property>
+          </layout>
+         </widget>
+         <widget class="QCheckBox" name="train_test_only_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>440</y>
+            <width>301</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Testing only (no training)</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+         <widget class="QLineEdit" name="train_filename_lineEdit">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>270</y>
+            <width>291</width>
+            <height>25</height>
+           </rect>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="train_select_file_pushButton">
+          <property name="geometry">
+           <rect>
+            <x>220</x>
+            <y>310</y>
+            <width>112</width>
+            <height>34</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Select</string>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="train_continue_training_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>360</y>
+            <width>201</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Continue training</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="train_viz_output_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>400</y>
+            <width>281</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Visualize output in training UI</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="train_backup_weights_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>320</y>
+            <width>201</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Backup weights</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="train_load_model_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>240</y>
+            <width>301</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Load specified LSTM model:</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="train_create_script_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>210</y>
+            <width>301</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Create LSTM from specified script:</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="train_regularly_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>490</y>
+            <width>301</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Trigger training every N seconds:</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QDoubleSpinBox" name="train_record_set_doubleSpinBox">
+          <property name="geometry">
+           <rect>
+            <x>41</x>
+            <y>540</y>
+            <width>151</width>
+            <height>25</height>
+           </rect>
+          </property>
+          <property name="maximum">
+           <double>9999.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>30.000000000000000</double>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_40">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>580</y>
+            <width>301</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Train using a max of N saved datasets:</string>
+          </property>
+         </widget>
+         <widget class="QComboBox" name="train_dataset_select_comboBox">
+          <property name="geometry">
+           <rect>
+            <x>241</x>
+            <y>610</y>
+            <width>111</width>
+            <height>25</height>
+           </rect>
+          </property>
+          <item>
+           <property name="text">
+            <string>random N</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>last N</string>
+           </property>
+          </item>
+         </widget>
+         <widget class="QSpinBox" name="train_datasets_spinBox">
+          <property name="geometry">
+           <rect>
+            <x>134</x>
+            <y>610</y>
+            <width>81</width>
+            <height>25</height>
+           </rect>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="train_backup_steps_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>211</x>
+            <y>540</y>
+            <width>161</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Backup steps</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="trainLive_checkBox">
+          <property name="geometry">
+           <rect>
+            <x>30</x>
+            <y>10</y>
+            <width>301</width>
+            <height>23</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Live</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+         <widget class="QDoubleSpinBox" name="train_sequence_doubleSpinBox">
+          <property name="geometry">
+           <rect>
+            <x>210</x>
+            <y>150</y>
+            <width>101</width>
+            <height>25</height>
+           </rect>
+          </property>
+          <property name="maximum">
+           <double>30.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_41">
+          <property name="geometry">
+           <rect>
+            <x>50</x>
+            <y>150</y>
+            <width>151</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Sequence [s]:</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="train_input_shape_label">
+          <property name="geometry">
+           <rect>
+            <x>50</x>
+            <y>180</y>
+            <width>261</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>--&gt; input shape is: [0,0]</string>
           </property>
          </widget>
         </widget>

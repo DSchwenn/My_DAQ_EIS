@@ -170,6 +170,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.writingFrequency = []  # np.array([1])
         self.writingPhase = []  # np.array([2])
         self.writingAmplitude = []  # np.array([3])
+        self.writingChannel = []
         self.isStarted = False
         self.writingTotalAmplitude = self.ui.writing_amplitude_SpinBox.value()
 
@@ -362,6 +363,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.writingFrequency = [100.0, 500.0, 1500.0, 3000.0]
         self.writingPhase = [0.0, 0.0, 0.0, 0.0]
         self.writingAmplitude = [0.7, 0.8, 0.9, 1.0]
+        self.writingChannel = [0, 0, 0, 0]
         self.updateFrequencyList()
 
 
@@ -407,6 +409,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
                         nData = [fg.getNofF(), 1]
             elif(chnInfoS == 'A'):
                 nData = [5, 1]
+                chRefIx = chnInfo[3]
             else:
                 nData = [1, 1]
 
@@ -631,7 +634,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         ter = self.ui.terminaCVonfiguration_comboBox.currentText()
         type = self.ui.channelDataTypeComboBox.currentText()
         ref = [0]
-        if(("Corr" in type) or ("Div" in type)):
+        if(("Corr" in type) or ("Div" in type) or ("Acc" in type)):
             ref = [x.row() for x in self.ui.readChannelList.selectedIndexes()]
             if(ref == []):
                 ref = [self.ui.readChannelList.currentRow()]
@@ -657,9 +660,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         elif( "Serial" in type ):
             ter = ""
             ch = "Serial " + str(ref)
-        elif( "Acc" in type ):
-            ter = ""
-            ch = "Acc/HR(uC)"
+        #elif( "Acc" in type ):
+        #    ter = ""
+        #    ch = "Acc/HR(uC)"
 
         self.readChannels.append([ch, ter, type, ref])
 
@@ -854,8 +857,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def updateFrequencyList(self):
         self.ui.write_frequencies_list.clear()
-        for (f, p, a) in zip(self.writingFrequency, self.writingPhase, self.writingAmplitude):
-            tStr = "F = %.2f Hz, Phase = %.2f deg, amp = %.2f" % (f, p, a)
+        for (f, p, a, ch) in zip(self.writingFrequency, self.writingPhase, self.writingAmplitude, self.writingChannel):
+            tStr = "F = %.2f Hz, Phase = %.2f deg, amp = %.2f, Ch%d" % (f, p, a, ch)
             # print(tStr)
             self.ui.write_frequencies_list.addItem(tStr)
         self.updateFrequencies()
@@ -866,9 +869,11 @@ class MyMainWindow(QtWidgets.QMainWindow):
         f = self.ui.frequencySpinBox.value()
         p = self.ui.phaseSpinBox.value()
         a = self.ui.amplitude_spinBox.value()
+        ch = self.ui.write_channel_spinBox.value()
         self.writingFrequency.append(f)
         self.writingPhase.append(p)
         self.writingAmplitude.append(a)
+        self.writingChannel.append(ch)
         self.updateFrequencyList()
         self.updatePlotLists()
 
@@ -885,6 +890,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         del self.writingFrequency[val]
         del self.writingPhase[val]
         del self.writingAmplitude[val]
+        del self.writingChannel[val]
         self.updateFrequencyList()
         self.updatePlotLists()
 
@@ -894,6 +900,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.writingFrequency = []
         self.writingPhase = []
         self.writingAmplitude = []
+        self.writingChannel = []
 
     @QtCore.pyqtSlot()
     def writingApplyFrequencies(self):
@@ -901,9 +908,11 @@ class MyMainWindow(QtWidgets.QMainWindow):
         f = self.ui.frequencySpinBox.value()
         p = self.ui.phaseSpinBox.value()
         a = self.ui.amplitude_spinBox.value()
+        ch = self.ui.write_channel_spinBox.value()
         self.writingFrequency[val] = f
         self.writingPhase[val] = p
         self.writingAmplitude[val] = a
+        self.writingChannel[val] = ch
         self.updateFrequencyList()
 
     @QtCore.pyqtSlot()
@@ -912,6 +921,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.frequencySpinBox.setValue(self.writingFrequency[val])
         self.ui.phaseSpinBox.setValue(self.writingPhase[val])
         self.ui.amplitude_spinBox.setValue(self.writingAmplitude[val])
+        self.ui.write_channel_spinBox.setValue(self.writingChannel[val])
 
     @QtCore.pyqtSlot()
     def writingPreviewSignal(self):
@@ -919,18 +929,21 @@ class MyMainWindow(QtWidgets.QMainWindow):
             return
 
         fg = self.generateFunctionGenerator(True)
-        sig = fg.getSignal()
-        print("Sig: " + str(np.size(sig)) + " at " + str(fg.getSampleRate()))
+        chLst = fg.availableChannelList()
+        for ch in chLst:
+            sig = fg.getSignal(ch)
+            print("Sig: " + str(np.size(sig)) + " at " + str(fg.getSampleRate()))
+            plt.plot(np.linspace(0, 1, np.size(sig)), sig[0, :])
 
-        plt.plot(np.linspace(0, 1, np.size(sig)), sig[0, :])
         plt.show()
 
     def generateFunctionGenerator(self,fFromUI):
         ff = np.array(self.writingFrequency)
         pp = np.array(self.writingPhase)
         aa = np.array(self.writingAmplitude)
+        ch = np.array(self.writingChannel)
         allAmpl = self.ui.writing_amplitude_SpinBox.value()
-        fg = FunctionGen(ff, pp, aa, allAmpl)
+        fg = FunctionGen(ff, pp, aa, ch, allAmpl)
         if(fFromUI):
             writeRate = self.ui.writeSampleRateSpinBox.value()
             fg.set_sample_rate(writeRate)
@@ -991,14 +1004,15 @@ class MyMainWindow(QtWidgets.QMainWindow):
             # ix = self.ui.device_comboBox.currentIndex()
             # device = self.devicesInfo.getDevice(ix-1)
             # v_range = self.ui.readVoltageRangeSpinBox.value()
-            # fg = self.generateFunctionGenerator()
+            #fg = self.generateFunctionGenerator()
             # fg.set_sample_rate(writeRate)
             # self.datahandler.setupSampling(readRate,fg.getDataSize(),self.readChannels,v_range)
             # self.datahandler.setupWriting( device, [0], fg )
 
             self.UpdateChannelSampleInfo()
             self.datahandler.setupSampling_si(self.readChannels)
-            self.datahandler.setupWriting_si([0])
+            #self.datahandler.setupWriting_si([0])
+            self.datahandler.setupWriting_fg(  )
             self.setupSerial()
 
             self.datahandler.startSamplingAndWriting()
@@ -1030,12 +1044,14 @@ class MyMainWindow(QtWidgets.QMainWindow):
             elementsLst = mylist[4]
             plotLst = mylist[5]
             stimLst = mylist[6]
+            wchLst = mylist[7]
 
             self.readChannels = chLst
             self.readUpdateChannelList() # update channel list
             self.writingFrequency = fLst
             self.writingPhase = pLst
             self.writingAmplitude = aLst
+            self.writingChannel = wchLst
             self.updateFrequencyList() # update frequency list
             self.setUIelements(elementsLst,stimLst)
 
@@ -1071,6 +1087,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         fLst = self.writingFrequency
         pLst = self.writingPhase
         aLst = self.writingAmplitude
+        chlst = self.writingChannel
         fg = self.generateFunctionGenerator(True)
         plt_set = self.generatePlotSettingList(fg) # Plot settings are 0 and 1:
         plotLst = plt_set
@@ -1096,7 +1113,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         stimLst = self.getStiumSettings() # [f,w,oor,lrPhase,r,g,b,prt,linkRGB]
         
 
-        mylist = [chLst,fLst,pLst,aLst,elementsLst,plotLst,stimLst]
+        mylist = [chLst,fLst,pLst,aLst,elementsLst,plotLst,stimLst,chlst]
 
         print(mylist)
 

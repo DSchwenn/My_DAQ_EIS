@@ -1,3 +1,4 @@
+from asyncio.format_helpers import extract_stack
 import numpy as np
 from numpy import fft as fft
 
@@ -89,10 +90,59 @@ class MyDataProcessing:
         mn = np.min(self.dat)
         return mn
 
+
+    def extract_uC_data(self,channelTiming,refDat,ix1,histDat):
+        nn = np.size(refDat)
+        nC = len(channelTiming)
+        extract =  [[] for x in range(nC)]#np.zeros(nC)
+        res = np.zeros(nC)
+        #e_count = np.zeros(nC)
+
+        cTdiff = np.sum(channelTiming)
+        mx = np.max(refDat)
+        mn = np.mean(refDat)
+        d_sig = mx-mn
+        thr = mn+0.5*d_sig
+        isStart = refDat>thr
+        a = isStart[0,0:-1]
+        b = isStart[0,1:]
+        (ixi_isStrt,) = np.nonzero(a!=b)
+        d_strt = np.diff(ixi_isStrt)
+        d_strt = np.mean(d_strt)
+        d_ix = d_strt/cTdiff
+
+        for ix in ixi_isStrt:
+            ti = 0
+            for i,ch in enumerate(channelTiming):
+                ti_strt = int(ti)+ix+1
+                ti = ti+d_ix*ch # end index
+                ti_end = int(ti)+ix-1
+                if( ti_end>ti_strt and ti_end < nn ):
+                    #extract[i] = extract[i]+np.mean( self.dat[ti_strt:ti_end] )
+                    #e_count[i] = e_count[i]+1
+                    extract[i] = extract[i]+self.dat[ti_strt:ti_end].tolist()
+        #extract = extract/e_count
+        for i,d in enumerate(extract):
+            dt = np.array(d)
+            res[i] = np.mean(dt)
+            #q1 = np.quantile(dt,0.25)
+            #q2 = np.quantile(dt,0.75)
+            #a = np.logical_and(dt>q1,dt<q2)
+            #m = np.median(dt)
+            #res[i] = np.mean(dt[a])
+            #res[i] = np.max(dt)-np.min(dt)
+
+        if(not histDat is None):
+            hd1 = histDat.getHistoricDataMean(ix1,res)
+            res = np.mean(hd1,1)
+
+        return res
+
+
     def getRaw(self):
         return self.dat
 
-    def processData(self,tp,ix1,ix2,channelSampleInfo):
+    def processData(self,tp,ix1,ix2,channelSampleInfo,histDat=None):
         self.dat = self.allDat[ix1]
 
         if( tp==0 ):
@@ -107,6 +157,8 @@ class MyDataProcessing:
             return self.doMax()
         elif(tp == 5): # min
             return self.doMin()
+        elif(tp == 8): # Acc & HR
+            return self.extract_uC_data([4,4,4,4,4],self.allDat[ix2],ix1,histDat)
         #elif(tp == 6): # Division
         #    return self.doDivision()
         return []

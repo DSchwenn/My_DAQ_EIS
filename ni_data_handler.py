@@ -39,7 +39,7 @@ class NiDataHandler:
         self.sampleInfo = sampleInfo
 
         self.ms_init = int(round(time.time() * 1000))
-        self.histDat = DataHistoryStorage(sampleInfo)
+        self.histDat = DataHistoryStorage(sampleInfo,6)
 
         self.ser_com = serialCom
 
@@ -73,13 +73,19 @@ class NiDataHandler:
     def setupWriting(self, device, channels):
         self.wDevice = device
         self.wChannels = channels
+        
+    def setupWriting_fg(self):
+        device = self.sampleInfo.getDevice()
+        fg = self.sampleInfo.getFunctionGen()
+        channels = fg.availableChannelList()
+        self.setupWriting(device, channels)
 
     def startWriting(self):
         if( self.writing ):
             return 0
         self.writing = True
         fg = self.sampleInfo.getFunctionGen()
-        self.ni_writer = NiWriter(fg.getSampleRate(),fg.getSignal(),self.wDevice ,self.wChannels)
+        self.ni_writer = NiWriter(fg.getSampleRate(),fg.getSignals(),self.wDevice ,self.wChannels)
         self.ni_writer.startWriting()
 
     def startSamplingAndWriting(self):
@@ -178,7 +184,7 @@ class NiDataHandler:
                     dat2 = datSerial[ix] # 0 is time...
                 else:
                     # process data
-                    dat2 = dp.processData(tp,ix,ix2,self.sampleInfo) # TODO: to correlate FFT resultswith other fft results (? or raw), trhis must be iomplemented here - requires fft channel data buffer of N - N=??
+                    dat2 = dp.processData(tp,ix,ix2,self.sampleInfo,self.histDat) # TODO: to correlate FFT resultswith other fft results (? or raw), trhis must be iomplemented here - requires fft channel data buffer of N - N=??
                 usedData.append(dat2)
                 usedChannels.append(i)
         

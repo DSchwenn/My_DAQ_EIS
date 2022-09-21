@@ -140,6 +140,8 @@ class ChannelSampleInfo:
                 return 3
         elif( typeStr[0] == 'S' ): # Serial
             return 7
+        elif( typeStr[0] == 'A' ): # Accelleration & HR via uC
+            return 8
         else: # Raw
             return 0
 
