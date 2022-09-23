@@ -16,7 +16,7 @@ from data_history_storage import *
 
 
 class NiDataHandler:
-    def __init__(self,sampleInfo,serialCom = None):
+    def __init__(self,sampleInfo,serialCom = None,trainingUI=None):
         self.dataCallbacks = []
         self.dataCallbacksChannels = []
         self.sampleRate = 100.0
@@ -42,6 +42,7 @@ class NiDataHandler:
         self.histDat = DataHistoryStorage(sampleInfo,6)
 
         self.ser_com = serialCom
+        self.trainUI = trainingUI
 
 
     # override utilizting self.sampleInfo
@@ -113,7 +114,7 @@ class NiDataHandler:
             ix = -1
             if( lne[0] in chn): # only add channels once...
                 ix = chn.index(lne[0])
-            elif( (not "Corr" in lne[0]) and (not "Div" in lne[0]) and (not "Ser" in lne[0])): # if correlation -> channel is not for reading
+            elif( (not "Corr" in lne[0]) and (not "Div" in lne[0]) and (not "Ser" in lne[0]) and (not "Train" in lne[0])): # if correlation -> channel is not for reading
                 ix = len(chn)
                 chn.append(lne[0])
                 ref.append(lne[1])
@@ -162,7 +163,7 @@ class NiDataHandler:
 
 
 
-    def distributeData(self,dat,datSerial):
+    def distributeData(self,dat,datSerial,datTrain):
         #1 # TODO: process channels according to ch_ref_type[2] & distribute
         #print(str(type(dat)) + " " + str(dat.size) + " " + str(dat.shape))
         #sz = dat.shape
@@ -182,6 +183,8 @@ class NiDataHandler:
                 tp = self.dat_type[i] # processing type
                 if( tp == 7 ): # Serial data
                     dat2 = datSerial[ix] # 0 is time...
+                elif( tp == 9 ): # Training data
+                    dat2 = datTrain
                 else:
                     # process data
                     dat2 = dp.processData(tp,ix,ix2,self.sampleInfo,self.histDat) # TODO: to correlate FFT resultswith other fft results (? or raw), trhis must be iomplemented here - requires fft channel data buffer of N - N=??
@@ -231,19 +234,25 @@ class NiDataHandler:
         #self.sampleInfo.setDataReadingStatus(True)
         #cnt = 0
         datSer = []
+        datTrain = []
 
         dat = self.ni_reader.getData()
         if( self.ser_com is not None  ):
             datSer = self.ser_com.getData(self.ni_reader.bufferSize(),self.sampleInfo.getprocessSR())
 
+        if(self.trainUI is not None):
+            datTrain = self.trainUI.getTargetDir()
+
         while( dat is not None and self.ni_reader is not None ):
             #cnt = cnt+1
             #if(self.ni_reader.bufferSize < 1):
             #    self.sampleInfo.setDataReadingStatus(False)
-            self.distributeData(dat,datSer)
+            self.distributeData(dat,datSer,datTrain)
             dat = self.ni_reader.getData()
             if( self.ser_com is not None  ):
                 datSer = self.ser_com.getData(self.ni_reader.bufferSize(),self.sampleInfo.getprocessSR())
+            if(self.trainUI is not None):
+                datTrain = self.trainUI.getTargetDir()
 
         if( self.ser_com is not None  ):
             self.ser_com.resetData()

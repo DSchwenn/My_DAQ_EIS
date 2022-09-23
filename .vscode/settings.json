@@ -1,13 +1,11 @@
 {
     "qtForPython.designer.path": "C:\\Users\\DSchwenn\\anaconda3\\Library\\bin\\designer.exe",
     "qtForPython.uic.path": "",
-    "qtForPython.uic.args": [
-        "-o \"${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}uic${pathSeparator}${fileBasenameNoExtension}.py\""
+    "qtForPython.uic.options": [
+        "-o",
+        "${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}uic${pathSeparator}${resourceBasenameNoExtension}.py"
     ],
-    "qtForPython.rcc.args": [
-        "-o \"${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}rcc${pathSeparator}${fileBasenameNoExtension}.py\""
-    ],
-    "qtForPython.lupdate.args": [
-        "-ts \"${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}lupdate${pathSeparator}${fileBasenameNoExtension}.qt.ts\""
-    ]
+    "qtForPython.uic.args": "-o \"${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}uic${pathSeparator}${fileBasenameNoExtension}.py\"",
+    "qtForPython.rcc.args": "-o \"${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}rcc${pathSeparator}${fileBasenameNoExtension}.py\"",
+    "qtForPython.lupdate.args": "-ts \"${workspaceFolder}${pathSeparator}qt_for_python${pathSeparator}lupdate${pathSeparator}${fileBasenameNoExtension}.qt.ts\""
 }

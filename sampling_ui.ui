@@ -1808,7 +1808,7 @@
           <property name="geometry">
            <rect>
             <x>39</x>
-            <y>80</y>
+            <y>70</y>
             <width>281</width>
             <height>19</height>
            </rect>
@@ -1821,7 +1821,7 @@
           <property name="geometry">
            <rect>
             <x>39</x>
-            <y>110</y>
+            <y>100</y>
             <width>271</width>
             <height>31</height>
            </rect>
@@ -1836,7 +1836,7 @@
           <property name="geometry">
            <rect>
             <x>40</x>
-            <y>440</y>
+            <y>460</y>
             <width>301</width>
             <height>23</height>
            </rect>
@@ -1852,7 +1852,7 @@
           <property name="geometry">
            <rect>
             <x>40</x>
-            <y>270</y>
+            <y>330</y>
             <width>291</width>
             <height>25</height>
            </rect>
@@ -1862,7 +1862,7 @@
           <property name="geometry">
            <rect>
             <x>220</x>
-            <y>310</y>
+            <y>360</y>
             <width>112</width>
             <height>34</height>
            </rect>
@@ -1875,8 +1875,8 @@
           <property name="geometry">
            <rect>
             <x>40</x>
-            <y>360</y>
-            <width>201</width>
+            <y>400</y>
+            <width>261</width>
             <height>23</height>
            </rect>
           </property>
@@ -1891,7 +1891,7 @@
           <property name="geometry">
            <rect>
             <x>40</x>
-            <y>400</y>
+            <y>430</y>
             <width>281</width>
             <height>23</height>
            </rect>
@@ -1907,7 +1907,7 @@
           <property name="geometry">
            <rect>
             <x>40</x>
-            <y>320</y>
+            <y>370</y>
             <width>201</width>
             <height>23</height>
            </rect>
@@ -1923,7 +1923,7 @@
           <property name="geometry">
            <rect>
             <x>40</x>
-            <y>240</y>
+            <y>300</y>
             <width>301</width>
             <height>23</height>
            </rect>
@@ -1939,7 +1939,7 @@
           <property name="geometry">
            <rect>
             <x>40</x>
-            <y>210</y>
+            <y>270</y>
             <width>301</width>
             <height>23</height>
            </rect>
@@ -1980,7 +1980,7 @@
            <double>9999.000000000000000</double>
           </property>
           <property name="value">
-           <double>30.000000000000000</double>
+           <double>40.000000000000000</double>
           </property>
          </widget>
          <widget class="QLabel" name="label_40">
@@ -2068,7 +2068,7 @@
           <property name="geometry">
            <rect>
             <x>210</x>
-            <y>150</y>
+            <y>210</y>
             <width>101</width>
             <height>25</height>
            </rect>
@@ -2084,26 +2084,55 @@
           <property name="geometry">
            <rect>
             <x>50</x>
-            <y>150</y>
+            <y>210</y>
             <width>151</width>
             <height>19</height>
            </rect>
           </property>
           <property name="text">
-           <string>Sequence [s]:</string>
+           <string>NN Sequence [s]:</string>
           </property>
          </widget>
          <widget class="QLabel" name="train_input_shape_label">
           <property name="geometry">
            <rect>
             <x>50</x>
-            <y>180</y>
+            <y>240</y>
             <width>261</width>
             <height>19</height>
            </rect>
           </property>
           <property name="text">
            <string>--&gt; input shape is: [0,0]</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_42">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>150</y>
+            <width>151</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Dataset length:</string>
+          </property>
+         </widget>
+         <widget class="QDoubleSpinBox" name="train_dataset_len_doubleSpinBox">
+          <property name="geometry">
+           <rect>
+            <x>210</x>
+            <y>150</y>
+            <width>101</width>
+            <height>25</height>
+           </rect>
+          </property>
+          <property name="maximum">
+           <double>9000.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>30.000000000000000</double>
           </property>
          </widget>
         </widget>
@@ -2157,10 +2186,18 @@
     <addaction name="actionBarlett"/>
     <addaction name="actionKaiser_14"/>
    </widget>
+   <widget class="QMenu" name="menuTarget_dialog">
+    <property name="title">
+     <string>Target dialog</string>
+    </property>
+    <addaction name="actionTgtShow"/>
+    <addaction name="actionTgtHide"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSampling"/>
    <addaction name="menuRecording"/>
    <addaction name="menuFFT_Window"/>
+   <addaction name="menuTarget_dialog"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoad_settings">
@@ -2274,6 +2311,16 @@
   <action name="actionReset_plots">
    <property name="text">
     <string>Reset plots</string>
+   </property>
+  </action>
+  <action name="actionTgtShow">
+   <property name="text">
+    <string>Show</string>
+   </property>
+  </action>
+  <action name="actionTgtHide">
+   <property name="text">
+    <string>Hide</string>
    </property>
   </action>
  </widget>

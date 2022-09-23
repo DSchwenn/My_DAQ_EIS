@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.layers import LSTM
+from keras.layers import LSTM, CuDNNLSTM
 from keras.layers import Dropout
 
 # Separate data recording for training
@@ -60,16 +60,16 @@ features_set = np.reshape(features_set, (features_set.shape[0], features_set.sha
 model = Sequential()
 
 # Creating LSTM and Dropout Layers
-model.add(LSTM(units=50, return_sequences=True, input_shape=(features_set.shape[1], features_set.shape[2])))
+model.add(CuDNNLSTM(units=62, return_sequences=True, input_shape=(features_set.shape[1], features_set.shape[2])))
 model.add(Dropout(0.2))
 
-model.add(LSTM(units=50, return_sequences=True)) # ,activation='relu'
+model.add(CuDNNLSTM(units=62, return_sequences=True)) # ,activation='relu'
 model.add(Dropout(0.2))
 
-model.add(LSTM(units=50, return_sequences=True))
+model.add(CuDNNLSTM(units=62, return_sequences=True))
 model.add(Dropout(0.2))
 
-model.add(LSTM(units=50))
+model.add(CuDNNLSTM(units=62))
 model.add(Dropout(0.2))
 
 
@@ -79,12 +79,23 @@ model.add(Dense(units = 2)) # ,activation='softmax'
 
 
 # Model Compilation
-
-model.compile(optimizer = 'adam', loss = 'mean_squared_error')  # learning rate lr=1e-3, decay=1e-5; loss='sparse_categorical_crossentropy'
+model.compile(optimizer = 'adam', loss = 'mean_squared_error')  # learning_rate lr=1e-3, decay=1e-5; loss='sparse_categorical_crossentropy'
 
 # Algorithm Training
 
-model.fit(features_set, labels, epochs = 10, batch_size = 32)
+#model.fit(features_set, labels, epochs = 5, batch_size = 32, validation_split = 0.3, workers = 2)
+#model.fit(features_set, labels, initial_epoch = 5, epochs = 10, batch_size = 32, validation_split = 0.3, workers = 2)
+
+history = model.fit(features_set, labels, epochs = 100, batch_size = 64, validation_split = 0.3, workers = 2)
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'val'], loc='upper left')
+plt.show()
+
 
 ## Testing LSTM
 apple_testing_complete = pd.read_csv(r'AAPL.csv')

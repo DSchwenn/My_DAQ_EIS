@@ -29,6 +29,8 @@ import pickle
 
 from wakepy import set_keepawake, unset_keepawake
 
+from qt_3d_targeting import QT3DTargetDialog, TrainingModesDirection
+
 # Compile Workaround: pyuic5 -o qt_for_python/uic/sampling_ui.py sampling_ui.ui
 # "C:\Users\DSchwenn\anaconda3\python.exe" "c:\Users\DSchwenn\.vscode\extensions\seanwu.vscode-qt-for-python-1.3.7/python/scripts/uic.py" -o "d:\Google Drive\MyData\MyEIS\pycode\qt_for_python\uic\sampling_ui_01.py" "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.ui"  
 # required pip install pyqt5-tools from anaconda console...
@@ -281,7 +283,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.sampleInfo.addRecipient(self.btmplot.updateData, plotIndex=self.btmplot.getPlotIndex())
         self.sampleInfo.addRecipient(self.raw_recorder.updateData, plotIndex=self.raw_recorder.getPlotIndex())
         self.sampleInfo.addRecipient(self.calc_recorder.updateData, plotIndex=self.calc_recorder.getPlotIndex())
-        self.datahandler = NiDataHandler(self.sampleInfo,self.sc)
         # Not aniline... timer to read buffer in data handler -> call plot updates via callback
 
 
@@ -293,8 +294,34 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.select_fft_folder_pushButton.clicked.connect(self.getCalcPath)
         self.ui.select_raw_folder_pushButton.clicked.connect(self.getRawPath)
 
-
-
+        # NN Train
+        self.train_channel_cb = CheckableComboBox()
+        self.ui.train_comboBoxWidgetLayout.addWidget(self.train_channel_cb)
+        #self.train_channel_cb.contentChanged.connect( self.updateBtmPlotDistribution)
+        # trainLive_checkBox
+        # train_target_mode_comboBox
+        # train_sequence_doubleSpinBox
+        # train_input_shape_label
+        # train_create_script_checkBox
+        # train_load_model_checkBox
+        # train_filename_lineEdit
+        # train_select_file_pushButton
+        # train_backup_weights_checkBox
+        # train_continue_training_checkBox
+        # train_viz_output_checkBox
+        # train_test_only_checkBox
+        # train_regularly_checkBox
+        # train_record_set_doubleSpinBox
+        # train_backup_steps_checkBox
+        # train_datasets_spinBox
+        # train_dataset_select_comboBox
+        self.targetDialog = QT3DTargetDialog()
+        self.ui.train_target_mode_comboBox.currentIndexChanged.connect(self.set3dTargetMode)
+        self.ui.actionTgtShow.triggered.connect(self.showTgtDialog)
+        self.ui.actionTgtHide.triggered.connect(self.hideTgtDialog)
+        #self.targetDialog.show()
+        
+        self.datahandler = NiDataHandler(self.sampleInfo,self.sc,self.targetDialog)
 
         # Menu items
         self.ui.actionLoad_settings.triggered.connect(self.loadSettings)
@@ -322,6 +349,22 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
         self.show()
 
+    @QtCore.pyqtSlot()
+    def showTgtDialog(self):
+        self.targetDialog.show()
+
+    @QtCore.pyqtSlot()
+    def hideTgtDialog(self):
+        self.targetDialog.hide()
+
+    @QtCore.pyqtSlot()
+    def set3dTargetMode(self):
+        ix = self.ui.train_target_mode_comboBox.currentIndex()
+        if(ix==0):
+            self.targetDialog.setTrainingMode(TrainingModesDirection.DIR_2D_CARDINAL)
+        elif(ix==1):
+            self.targetDialog.setTrainingMode(TrainingModesDirection.DIR_2D_ANY)
+        
 
     def handleUpdateCallbacks(self,switchOn):
         if(switchOn):
@@ -381,6 +424,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             fg, self.readChannels, plotSettingList, readRate, writeRate, v_range, corrTime, device)
         print("SI: " + str(plotSettingList))
 
+
     def generatePlotSettingListAbstr(self, fg, prim_cb, proc_cb, tb_cb, lve_cb, n_sb, man_cb, min_sb, max_sb, ch_cb):
         chList = []
 
@@ -409,6 +453,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
                         nData = [fg.getNofF(), 1]
             elif(chnInfoS == 'A'):
                 nData = [5, 1]
+                chRefIx = chnInfo[3]
+            elif(chnInfoS == 'T'):
+                nData = [3, 1]
                 chRefIx = chnInfo[3]
             else:
                 nData = [1, 1]
@@ -510,7 +557,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
                                                     self.ui.btm_upperLimit_doubleSpinBox, self.btm_channel_cb)
         chList.append(tchList)
 
-
         tchList = self.generateRecorderSettings('R',fg) # recorder for raw data
         chList.append(tchList)
 
@@ -518,6 +564,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         chList.append(tchList)
 
         return chList
+
 
     # uC / serial callbacks
     @QtCore.pyqtSlot()
@@ -660,6 +707,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         elif( "Serial" in type ):
             ter = ""
             ch = "Serial " + str(ref)
+        elif( "Train" in type ):
+            ter = ""
+            ch = "NN Training"
         #elif( "Acc" in type ):
         #    ter = ""
         #    ch = "Acc/HR(uC)"

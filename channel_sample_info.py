@@ -112,6 +112,12 @@ class ChannelSampleInfo:
                 tstr = ci[0] + " " + s
                 tstr = self.addHeaderInfo(tstr,ci,forHeader)
                 legend.append(tstr)
+        elif(len(ci)>0 and ci[2][0] == 'T'):
+            tlst = ["Dir X","Dir Y","Dir Z"]
+            for s in tlst:
+                tstr = ci[0] + " " + s
+                tstr = self.addHeaderInfo(tstr,ci,forHeader)
+                legend.append(tstr)
         elif(len(ci)>0):
             tstr = ci[0]
             tstr = self.addHeaderInfo(tstr,ci,forHeader)
@@ -142,6 +148,8 @@ class ChannelSampleInfo:
             return 7
         elif( typeStr[0] == 'A' ): # Accelleration & HR via uC
             return 8
+        elif( typeStr[0] == 'T' ): # Training target
+            return 9
         else: # Raw
             return 0
 
