@@ -4,7 +4,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.layers import LSTM
+from keras.layers import LSTM, CuDNNLSTM
 from keras.layers import Dropout
 from keras import optimizers, losses, metrics
 
@@ -48,7 +48,7 @@ class KerasNNGenerator():
 
         # Model Compilation
         #model.compile(optimizer = 'adam', loss = 'mean_squared_error')
-        model.compile(optimizer=optimizers.Adam(learning_rate=1e-3,decay_rate=1e-5),
+        model.compile(optimizer=optimizers.Adam(learning_rate=1e-3,decay=1e-5),
               loss=losses.MeanSquaredError()) 
               #metrics=[metrics.BinaryAccuracy(),metrics.FalseNegatives()])
 
@@ -65,12 +65,13 @@ class KerasNNGenerator():
         self.dropout = num
 
 
-    def saveNeuralNetAs(self, name):
+    def saveNeuralNet(self):
         if(self.nn_model is None):
             return
 
         self.filename = self.generateFileName()
         self.nn_model.save(self.filename)
+        return self.filename
 
 
     def generateFileName(self):

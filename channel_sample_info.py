@@ -16,6 +16,7 @@ class ChannelSampleInfo:
         self.functionGen = None
         self.channelList = [] # readChannels.append([ch,ter,type,ref])
         self.plotSettingList = [] # per plot: channel index (relative to channelList) + complex preference (abs or phase) + 
+        self.trainIdList = []
         # N data [channels,samples per channel]
         # Then also: use toolbar, isLive, N samples per screen
         # Followed by: useManualLimit, min limit, max limit, selected channels list
@@ -30,7 +31,12 @@ class ChannelSampleInfo:
         self.corrTime = 2.
         self.fftWinType = 0
         
+    def setTrainIdList(self,lst):
+        print("New Train list: " + str(lst))
+        self.trainIdList = lst
 
+    def getTrainIdList(self):
+        return self.trainIdList
 
     def addRecipient(self,callbackFkt,plotIndex):
         self.dataCallbacks.append([plotIndex,callbackFkt])

@@ -111,6 +111,9 @@ class MyDataProcessing:
         d_strt = np.mean(d_strt)
         d_ix = d_strt/cTdiff
 
+        if(np.size(ixi_isStrt)<2):
+            return extract
+
         for ix in ixi_isStrt:
             ti = 0
             for i,ch in enumerate(channelTiming):

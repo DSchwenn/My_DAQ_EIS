@@ -21,6 +21,7 @@ from my_file_writer import *
 from ni_data_handler import *
 from channel_sample_info import *
 from serial_uc_com import *
+from training_file_writer import TrainingFileWriter
 
 from channel_sample_info import *
 
@@ -30,6 +31,8 @@ import pickle
 from wakepy import set_keepawake, unset_keepawake
 
 from qt_3d_targeting import QT3DTargetDialog, TrainingModesDirection
+
+
 
 # Compile Workaround: pyuic5 -o qt_for_python/uic/sampling_ui.py sampling_ui.ui
 # "C:\Users\DSchwenn\anaconda3\python.exe" "c:\Users\DSchwenn\.vscode\extensions\seanwu.vscode-qt-for-python-1.3.7/python/scripts/uic.py" -o "d:\Google Drive\MyData\MyEIS\pycode\qt_for_python\uic\sampling_ui_01.py" "d:\Google Drive\MyData\MyEIS\pycode\sampling_ui_01.ui"  
@@ -145,6 +148,11 @@ from qt_3d_targeting import QT3DTargetDialog, TrainingModesDirection
 #     minor = self.minorTicks[0]
 # IndexError: list index out of range
 # Error with read_many_sample
+
+# TODO: when going live, instantiate & setup TrainMyNN; if already exists, update with newest. Interface class?
+# !! TODO implementr destructr/ correct ending for trainer recording and keras training...
+#       Also plots do not seem to join riught...
+#
 
 # Anti aliasing?
 # Corr header with 4 channels -> only 1st...
@@ -278,11 +286,15 @@ class MyMainWindow(QtWidgets.QMainWindow):
             targetWidget=self.ui.btm_plt_widget, parent=self, plotIndex=1, sampleInfo=self.sampleInfo)
         self.raw_recorder = MyFileWriter(2,self.sampleInfo,'R')
         self.calc_recorder = MyFileWriter(3,self.sampleInfo,'C')
+
+        self.trainRecorder = TrainingFileWriter(4,self.sampleInfo,".\\TrainingData")
+
         self.updateRecorderPaths()
         self.sampleInfo.addRecipient(self.topplot.updateData, plotIndex=self.topplot.getPlotIndex())
         self.sampleInfo.addRecipient(self.btmplot.updateData, plotIndex=self.btmplot.getPlotIndex())
         self.sampleInfo.addRecipient(self.raw_recorder.updateData, plotIndex=self.raw_recorder.getPlotIndex())
         self.sampleInfo.addRecipient(self.calc_recorder.updateData, plotIndex=self.calc_recorder.getPlotIndex())
+        self.sampleInfo.addRecipient(self.trainRecorder.updateData, plotIndex=self.trainRecorder.getPlotIndex())
         # Not aniline... timer to read buffer in data handler -> call plot updates via callback
 
 
@@ -297,7 +309,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         # NN Train
         self.train_channel_cb = CheckableComboBox()
         self.ui.train_comboBoxWidgetLayout.addWidget(self.train_channel_cb)
-        #self.train_channel_cb.contentChanged.connect( self.updateBtmPlotDistribution)
+        self.train_channel_cb.contentChanged.connect( self.updateTargetChannelSelection )
+        self.ui.trainLive_checkBox.stateChanged.connect(self.updateTrainDistribution)
+        self.ui.train_dataset_len_doubleSpinBox.valueChanged.connect(self.updateTrainDistribution)
         # trainLive_checkBox
         # train_target_mode_comboBox
         # train_sequence_doubleSpinBox
@@ -320,6 +334,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.actionTgtShow.triggered.connect(self.showTgtDialog)
         self.ui.actionTgtHide.triggered.connect(self.hideTgtDialog)
         #self.targetDialog.show()
+        self.nn_training = None #TrainMyNN()
         
         self.datahandler = NiDataHandler(self.sampleInfo,self.sc,self.targetDialog)
 
@@ -496,6 +511,37 @@ class MyMainWindow(QtWidgets.QMainWindow):
         ch_cb.setItemsChecked(chChk)
         
 
+    def generateTrainingRecSettings(self,fg):
+        lst = self.sampleInfo.getTrainIdList()
+        cIxLst = [ l[0] for l in lst]
+        eEnLst = [ l[3] for l in lst]
+        if(len(eEnLst)>0):
+            cIxLst = np.array(cIxLst)
+            cIxLst = cIxLst[np.array(eEnLst)]
+            cIxLst = cIxLst.tolist()
+
+        chn = []
+        chCount = 0
+        for ix,ch in enumerate(self.readChannels):
+            if( ix in cIxLst):
+                chn.append(ix)
+                chCount += cIxLst.count(ix)
+
+        nData = [chCount,1]# [number of non raw chanels (FFT counts N*), 1]
+        lve = self.ui.trainLive_checkBox.isChecked()# True if recording checkbox is checked
+
+        type = -1 # 0 ABS, 1 Phase -> -1 complex
+        
+        tlbr = False
+        n = -1 # number of sdamples per screen is invalid
+        useMan = False # not limits to be applied during recording
+        minV = 0 # not used
+        maxV = 0 # not used
+        chChk = [True] # not used - all channels, always
+
+        chList = [chn, type, nData, tlbr, lve, n, useMan, minV, maxV, chChk]
+        return chList 
+
     def generateRecorderSettings(self,type,fg):
         # type R=raw C=calculated
         # nsmp number of samples from fg
@@ -519,6 +565,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 elif(ch[2][0] == 'A'):
                     chn.append(ix)
                     chCount = chCount+5
+                elif(ch[2][0] == 'T'):
+                    chn.append(ix)
+                    chCount = chCount+3
                 elif(ch[2][0] != 'R' ): #ch[2][0] == 'C' ):
                     chn.append(ix)
                     chCount = chCount+1
@@ -561,6 +610,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
         chList.append(tchList)
 
         tchList = self.generateRecorderSettings('C',fg) # recorder for calculated data
+        chList.append(tchList)
+
+        tchList = self.generateTrainingRecSettings(fg)
         chList.append(tchList)
 
         return chList
@@ -720,8 +772,94 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
         self.readUpdateChannelList()
         self.updatePlotLists()
+        self.updateTrainList()
 
         #self.handleUpdateCallbacks(True)
+
+    def updateTrainList(self):
+        # also call on remoive channel and on write changes
+        fg = self.generateFunctionGenerator(False)
+        f_list = fg.get_f_list()
+        self.train_channel_cb.clear()
+        trainList = []
+        idList = []
+        for ix,ch in enumerate(self.readChannels):
+            lgd = self.sampleInfo.getChannelLegend(ix,f_list,False)
+            tp = self.sampleInfo.type2num(ch[2])
+            # Save list with references for when used?
+            if(not "Raw" in ch[2] ): # not raw.
+                if( "FFT" in ch[2]): # has ABS and phase
+                    lgd1 = [l + " " + ch[2] + " ABS" for l in lgd]
+                    t_idlst1 = [[ix,tp,0,False] for l in lgd]
+                    trainList += lgd1
+                    idList+=t_idlst1
+                    lgd2 = [l + " " + ch[2] + " Phase" for l in lgd]
+                    t_idlst2 = [[ix,tp,1,False] for l in lgd]
+                    trainList += lgd2
+                    idList+=t_idlst2
+                else:
+                    lgd1 = [l + " " + ch[2] for l in lgd]
+                    trainList += lgd1
+                    idList += [[ix,tp,-1,False] for l in lgd]
+
+        self.train_channel_cb.addItems(trainList)
+        self.sampleInfo.setTrainIdList(idList)
+        #self.updateTargetChannelSelection()
+        # TODO: channel data to sampleinfo && refresh sample info data on NN channel selection change.
+    
+    def getTrainSettings(self):
+        trainSet = []
+        trainSet.append(self.ui.train_target_mode_comboBox.currentIndex())
+        trainSet.append(self.train_channel_cb.itemCheckedList())
+        trainSet.append(self.ui.train_dataset_len_doubleSpinBox.value())
+        trainSet.append(self.ui.train_sequence_doubleSpinBox.value())
+        trainSet.append(self.ui.train_create_script_checkBox.isChecked())
+        trainSet.append(self.ui.train_load_model_checkBox.isChecked())
+        trainSet.append(self.ui.train_filename_lineEdit.text())
+        trainSet.append(self.ui.train_backup_weights_checkBox.isChecked())
+        trainSet.append(self.ui.train_continue_training_checkBox.isChecked())
+        trainSet.append(self.ui.train_viz_output_checkBox.isChecked())
+        trainSet.append(self.ui.train_test_only_checkBox.isChecked())
+        trainSet.append(self.ui.train_regularly_checkBox.isChecked())
+        trainSet.append(self.ui.train_record_set_doubleSpinBox.value())
+        trainSet.append(self.ui.train_backup_steps_checkBox.isChecked())
+        trainSet.append(self.ui.train_datasets_spinBox.value())
+        trainSet.append(self.ui.train_dataset_select_comboBox.currentIndex())
+        return trainSet
+
+
+    def setTrainSettings(self,trainSet):
+        # channel changes reset the combo box channel selection - make sure its restored after loeading...
+        self.ui.train_target_mode_comboBox.setCurrentIndex(trainSet[0])
+        self.train_channel_cb.setItemsChecked(trainSet[1])
+        self.ui.train_dataset_len_doubleSpinBox.setValue(trainSet[2])
+        self.ui.train_sequence_doubleSpinBox.setValue(trainSet[3])
+        self.ui.train_create_script_checkBox.setChecked(trainSet[4])
+        self.ui.train_load_model_checkBox.setChecked(trainSet[5])
+        self.ui.train_filename_lineEdit.setText(trainSet[6])
+        self.ui.train_backup_weights_checkBox.setChecked(trainSet[7])
+        self.ui.train_continue_training_checkBox.setChecked(trainSet[8])
+        self.ui.train_viz_output_checkBox.setChecked(trainSet[9])
+        self.ui.train_test_only_checkBox.setChecked(trainSet[10])
+        self.ui.train_regularly_checkBox.setChecked(trainSet[11])
+        self.ui.train_record_set_doubleSpinBox.setValue(trainSet[12])
+        self.ui.train_backup_steps_checkBox.setChecked(trainSet[13])
+        self.ui.train_datasets_spinBox.setValue(trainSet[14])
+        self.ui.train_dataset_select_comboBox.setCurrentIndex(trainSet[14])
+
+
+    @QtCore.pyqtSlot()
+    def updateTargetChannelSelection(self):
+        chklst = self.train_channel_cb.itemCheckedList()
+        lst = self.sampleInfo.getTrainIdList()
+
+        for i,lel in enumerate(lst):
+            lel[3] = chklst[i]
+            lst[i] = lel
+
+        self.sampleInfo.setTrainIdList(lst)
+        self.updateTrainInputShapeLabel()
+
 
 
     def updatePlotLists(self):
@@ -830,6 +968,34 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.btmplot.updatePlot()
 
     @QtCore.pyqtSlot()
+    def updateTrainDistribution(self):
+        self.UpdateChannelSampleInfo()
+        self.sampleInfo.allChannelNeedUpdate()
+
+        self.trainRecorder.settings( self.ui.train_dataset_len_doubleSpinBox.value() )
+
+        if(self.ui.trainLive_checkBox.isChecked()):
+            self.train_channel_cb.setEnabled(False)
+            self.ui.train_dataset_len_doubleSpinBox.setEnabled(False)
+        else:
+            self.train_channel_cb.setEnabled(True)
+            self.ui.train_dataset_len_doubleSpinBox.setEnabled(True)
+
+
+    def updateTrainInputShapeLabel(self):
+        tt = self.ui.train_sequence_doubleSpinBox.value()
+        fg = self.generateFunctionGenerator(False)
+        sr = fg.getProcessedSampleRate()
+        nSample = int(tt*sr)
+
+        lst = self.sampleInfo.getTrainIdList()
+        nChLst = [l[3] for l in lst]
+        nCh = np.sum( nChLst )
+
+        self.ui.train_input_shape_label.setText("--> input shape is: [" + str(nSample) + "," + str(nCh) + "]")
+
+
+    @QtCore.pyqtSlot()
     def updateTopPlotDistribution(self):
         self.UpdateChannelSampleInfo()
         # self.sampleInfo.channelNeedsUpdate(self.topplot.getIndex())
@@ -860,12 +1026,14 @@ class MyMainWindow(QtWidgets.QMainWindow):
         del self.readChannels[val]
         self.readUpdateChannelList()
         self.updatePlotLists()
+        self.updateTrainList()
 
     @QtCore.pyqtSlot()
     def readClearList(self):
         self.readChannels = []
         self.readUpdateChannelList()
         self.updatePlotLists()
+        self.updateTrainList()
 
     @QtCore.pyqtSlot()
     def readDataTypeUpdt(self):
@@ -926,6 +1094,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.writingChannel.append(ch)
         self.updateFrequencyList()
         self.updatePlotLists()
+        self.updateTrainList()
 
     def updateFrequencies(self):
         if(self.ui.device_hold_checkBox.isChecked):
@@ -943,6 +1112,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         del self.writingChannel[val]
         self.updateFrequencyList()
         self.updatePlotLists()
+        self.updateTrainList()
 
     @QtCore.pyqtSlot()
     def writingClearFrequencies(self):
@@ -1062,9 +1232,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.UpdateChannelSampleInfo()
             self.datahandler.setupSampling_si(self.readChannels)
             #self.datahandler.setupWriting_si([0])
-            self.datahandler.setupWriting_fg(  )
+            self.datahandler.setupWriting_fg( )
             self.setupSerial()
 
+            self.sampleInfo.allChannelNeedUpdate()
             self.datahandler.startSamplingAndWriting()
 
             self.isStarted = True
@@ -1095,6 +1266,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             plotLst = mylist[5]
             stimLst = mylist[6]
             wchLst = mylist[7]
+            trainSet = mylist[8]
 
             self.readChannels = chLst
             self.readUpdateChannelList() # update channel list
@@ -1106,10 +1278,11 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.setUIelements(elementsLst,stimLst)
 
             self.updatePlotLists()
+            self.updateTrainList()
             # update plot settings
             # according to generatePlotSettingListAbstr() -> set UI, then call self.UpdateChannelSampleInfo()
             # Frequency lists must be restored already
-            fg = self.generateFunctionGenerator(True)
+            #fg = self.generateFunctionGenerator(True)
             # Also self.readChannels must be set also updatePlotLists
             # Top plot
             if(len(self.readChannels) > 0): # make sure channel lists are present before setting them
@@ -1123,6 +1296,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
                                                     self.ui.btm_plot_live_checkBox, self.ui.btm_plot_NspinBox, self.ui.btm_useManLim_checkBox, self.ui.btm_lowerLimit_doubleSpinBox,
                                                     self.ui.btm_upperLimit_doubleSpinBox, self.btm_channel_cb)
             self.UpdateChannelSampleInfo()
+            self.setTrainSettings(trainSet)
+            self.updateTargetChannelSelection()
 
 
 
@@ -1161,9 +1336,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
         elementsLst = [rec_cal_pth,rec_raw_pth,dev_ix,sr,wr,hld_f,vrng,corrTm,wrAmp,fftWin]
 
         stimLst = self.getStiumSettings() # [f,w,oor,lrPhase,r,g,b,prt,linkRGB]
+        trainSet = self.getTrainSettings()
         
 
-        mylist = [chLst,fLst,pLst,aLst,elementsLst,plotLst,stimLst,chlst]
+        mylist = [chLst,fLst,pLst,aLst,elementsLst,plotLst,stimLst,chlst,trainSet]
 
         print(mylist)
 

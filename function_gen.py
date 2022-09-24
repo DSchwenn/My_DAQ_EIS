@@ -119,6 +119,9 @@ class FunctionGen:
     def getNofF(self):
         return len(self.f_list)
 
+    def getProcessedSampleRate(self):
+        return self.f_list[0]
+
 
 # import matplotlib.pyplot as plt
 

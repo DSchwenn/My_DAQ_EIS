@@ -1822,7 +1822,7 @@
            <rect>
             <x>39</x>
             <y>100</y>
-            <width>271</width>
+            <width>351</width>
             <height>31</height>
            </rect>
           </property>
@@ -2068,7 +2068,7 @@
           <property name="geometry">
            <rect>
             <x>210</x>
-            <y>210</y>
+            <y>190</y>
             <width>101</width>
             <height>25</height>
            </rect>
@@ -2084,7 +2084,7 @@
           <property name="geometry">
            <rect>
             <x>50</x>
-            <y>210</y>
+            <y>190</y>
             <width>151</width>
             <height>19</height>
            </rect>
@@ -2097,7 +2097,7 @@
           <property name="geometry">
            <rect>
             <x>50</x>
-            <y>240</y>
+            <y>220</y>
             <width>261</width>
             <height>19</height>
            </rect>
@@ -2133,6 +2133,19 @@
           </property>
           <property name="value">
            <double>30.000000000000000</double>
+          </property>
+         </widget>
+         <widget class="QLabel" name="train_input_shape_label_2">
+          <property name="geometry">
+           <rect>
+            <x>180</x>
+            <y>240</y>
+            <width>211</width>
+            <height>20</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>(0 to 2 = targets)</string>
           </property>
          </widget>
         </widget>

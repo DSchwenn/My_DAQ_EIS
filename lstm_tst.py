@@ -10,6 +10,7 @@ from keras.layers import Dense
 from keras.layers import LSTM, CuDNNLSTM
 from keras.layers import Dropout
 
+
 # Separate data recording for training
 # Normalization: what does make sense? Phase min/max; Acc/ HR min/max; FFT ABS relative (division)? Source FFT...?
 # save normalization method with model?
@@ -75,7 +76,7 @@ model.add(Dropout(0.2))
 
 # Creating Dense Layer
 
-model.add(Dense(units = 2)) # ,activation='softmax'
+model.add(Dense(units = 1)) # ,activation='softmax'
 
 
 # Model Compilation

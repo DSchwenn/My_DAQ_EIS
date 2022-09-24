@@ -106,10 +106,11 @@ class NiDataHandler:
         
         chn = []
         ref = []
+        realChanDict = [[],[]]
         self.channelIxi = []
         self.channelRefIxi = []
         self.dat_type = []
-        for lne in self.ch_ref_type:
+        for i,lne in enumerate(self.ch_ref_type):
             tpe = self.sampleInfo.type2num(lne[2])
             ix = -1
             if( lne[0] in chn): # only add channels once...
@@ -120,8 +121,10 @@ class NiDataHandler:
                 ref.append(lne[1])
             elif( "Ser" in lne[0]):
                 ix = lne[3][0]
+            (refIx,realChanDict) = self.correctRefix(realChanDict,lne[0],lne[3],i,ix)
+
             self.channelIxi.append( ix )
-            self.channelRefIxi.append( lne[3] )
+            self.channelRefIxi.append( refIx )
             self.dat_type.append(tpe)
         # self.channelIxi for distribution; only first ref type will be acknowledged
         # only channels in chn will be sampled
@@ -133,6 +136,17 @@ class NiDataHandler:
             time.sleep(0.05)
         self.updateData()
         return 1
+
+    def correctRefix(self,realChanDict,tpe,chRef,i,ix): # refIx must matchj the index in the data later recieved by distributeData...
+        # TODO: does this still work with double ref...? "Corr"?
+        refIx = chRef
+        if( len(refIx)==1 and (not "Corr" in tpe) and (not "Div" in tpe) and (not "Ser" in tpe) and (not "Train" in tpe)):
+                realChanDict[0].append(i)
+                realChanDict[1].append(ix)
+                if( refIx[0] in realChanDict[0] ):
+                    tix = realChanDict[0].index(refIx[0])
+                    refIx = [realChanDict[1][tix]]
+        return (refIx,realChanDict)
 
     def stopSampling(self):
         if( not self.sampling ):
