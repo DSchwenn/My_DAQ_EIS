@@ -52,6 +52,7 @@ class TrainMyNN(threading.Thread):
         self.trigger_training = False
         self.exit_thread = False
         self.alwaysIncludeLatestsDataset = True
+        self.continueTraining = True
 
         self.model = None
         self.loss = 0
@@ -65,26 +66,74 @@ class TrainMyNN(threading.Thread):
         self.trainData = []
         self.trainLabels = []
 
+        self.accessingWeights = False
+        self.lastWeights = None # model.get_weights  set_weights
+        self.predictionModel = None
+        self.weightCount = 0
+        self.lastWeight = -1
+
         self.checkInitialization()
         self.loadModel()
 
         self.start()
 
 
+    def predictOutput(self,input):
+        if(np.size(input)<1):
+            return (None,0)
+
+        self.updatePredictionModel()
+
+        normIn = self.normalizeDataset([input]) # TODO: does thatr work...?
+        normIn = normIn[0]
+
+        normIn = normIn[:,3:]
+        normIn = np.array([normIn])
+
+        out = self.predictionModel.predict(normIn,verbose=0)
+
+        return (out,self.lastWeight)
+
+
+    def updatePredictionModel(self):
+        if(self.lastWeight < self.weightCount and (not self.lastWeights is None) ):
+            while(self.accessingWeights):
+                time.sleep(0.01)
+            self.accessingWeights = True
+            self.predictionModel.set_weights(self.lastWeights)
+            self.accessingWeights = False
+            self.lastWeight = self.weightCount
 
     def setTiming(self,ttime,tintervall,autoTrigger = True):
         self.training_time = ttime
         self.training_intervall = tintervall
         self.auto_trigger_training = autoTrigger
         self.lastTime = time.time()
+    
+    def switchAutoTrain(self,autoTrigger):
+        self.auto_trigger_training = autoTrigger
 
+    def setMetaData(self,backupWeights=True,backupSteps=True,continueTraining=True):
+        self.continueTraining = continueTraining
+        self.backup_start_weights = backupWeights
+        self.backup_steps = backupSteps
+
+    def runTraining(self,doRun = True):
+        self.auto_trigger_training = doRun
+
+    def specifyRandomSetSel(self,rss):
+        self.randomSetselection = rss
+
+    def specifyTrainingSetNumber(self,n):
+        self.n_dataset_train = n
 
     def checkInitialization(self):
         self.normalization_initialized = self.loadNormnalizationData()
 
     def loadModel(self):
-        filePath = os.path.join(self.nn_folder, self.nn_filename)
+        filePath = self.nn_filename # os.path.join(self.nn_folder, self.nn_filename)
         self.model = keras.models.load_model(filePath)
+        self.predictionModel = keras.models.clone_model(self.model)
     
     def saveModel(self):
         filePath = os.path.join(self.nn_folder, self.nn_filename)
@@ -137,6 +186,12 @@ class TrainMyNN(threading.Thread):
 
 
     def runTraining(self,epochs=3):
+
+        if(self.continueTraining and self.session_count<=0):
+            ld = self.loadNewestWeights()
+            if(not ld and self.backup_start_weights ): # only save when we could not load latest weights...
+                self.saveModelWeights()
+
         # continue for number of epochs estimated to fill given time - whenm finished check if theres more time - recalculate time per epoch -> maybe train some more
         ep2 = self.epoch_count + epochs
         self.model.fit(self.trainData, self.trainLabels , initial_epoch = self.epoch_count , epochs = ep2, batch_size = self.batch_size, validation_split = self.validation_split, workers = self.workers) 
@@ -237,6 +292,7 @@ class TrainMyNN(threading.Thread):
         self.normalization_initialized = True
         return datNorm
 
+
     def generateTrainingSets(self,data):
         trainLabels = []
         trainData = []
@@ -267,7 +323,7 @@ class TrainMyNN(threading.Thread):
 
     def saveNormalizationData(self):
         fileName = self.getNormalizerFilename()
-        filePath = os.path.join(self.nn_folder, fileName)
+        filePath = fileName #os.path.join(self.nn_folder, fileName)
         normTypes = [en.value for en in self.normalization_types]
         with open(filePath, 'wb') as f: 
             mylist = [normTypes,self.normalization_data]
@@ -282,6 +338,8 @@ class TrainMyNN(threading.Thread):
             normTypes = mylist[0]
             self.normalization_data = mylist[1]
             self.normalization_types = [ NormalizationTypes(nt) for nt in normTypes]
+            if(len(self.normalization_data)<1):
+                return False
             return True
         return False
 
@@ -295,19 +353,31 @@ class TrainMyNN(threading.Thread):
         # in NN folder
         fn = self.getWeightsFilename()
         filePath = os.path.join(self.nn_folder, fn)
+        while(self.accessingWeights):
+            time.sleep(0.01)
+        self.accessingWeights = True
+        self.lastWeights = self.model.get_weights()
+        self.weightCount += 1
+        self.accessingWeights = False
         self.model.save_weights( filePath )
         
     def loadNewestWeights(self):
         flist = os.listdir(self.nn_folder) # from the folder get a list of filenames
         dat = [".weights" in f for f in flist]
         ixi = np.nonzero(dat)
+        ixi = ixi[0]
+        if( np.size(ixi)<1 ):
+            return False
         fList2 = [flist[ixi[i]] for i in range(len(ixi))]
         fpList2 = [os.path.join(self.nn_folder, f) for f in fList2]
         ftm = [os.path.getmtime(fp) for fp in fpList2]
         ix = ftm.index(max(ftm))
         lastWeightsFn = fpList2[ix]
+        ix = lastWeightsFn.index(".weights")
+        lastWeightsFn = lastWeightsFn[:ix+8]
 
         self.model.load_weights(lastWeightsFn)
+        return True
 
     def getTrainingStatus(self):
         return (self.loss,self.loss_val) 
@@ -325,9 +395,6 @@ class TrainMyNN(threading.Thread):
         if(not self.prepareData() ): # same labes/ data per session - only if enough.
             return
 
-        if(self.backup_steps or (self.session_count<=0 and self.backup_start_weights) ):
-            self.saveModelWeights()
-        
         t1 =  time.time()
         nStart = 2
         self.runTraining(nStart)
@@ -344,6 +411,9 @@ class TrainMyNN(threading.Thread):
                 self.runTraining(nRest)
             t2 = time.time()
             print("Trained " + str(nCum) + " epochs in " + str(t2-t1) + "seconds")
+        
+        if(self.backup_steps):
+            self.saveModelWeights()
 
 
     def run(self):

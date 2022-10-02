@@ -17,6 +17,9 @@ class SerialuCCom(threading.Thread):
         self.pauseReading = False
         self.isStarted = False
     
+    def isThrStarted(self):
+        return self.isStarted
+
     def getPortList(self):
         portLst = []
         ports = serial.tools.list_ports.comports()

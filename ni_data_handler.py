@@ -250,23 +250,27 @@ class NiDataHandler:
         datSer = []
         datTrain = []
 
+        if( self.ni_reader is None ):
+            return
         dat = self.ni_reader.getData()
         if( self.ser_com is not None  ):
             datSer = self.ser_com.getData(self.ni_reader.bufferSize(),self.sampleInfo.getprocessSR())
 
         if(self.trainUI is not None):
-            datTrain = self.trainUI.getTargetDir()
+            datTrain = self.trainUI.getTrainingDir()
 
         while( dat is not None and self.ni_reader is not None ):
             #cnt = cnt+1
             #if(self.ni_reader.bufferSize < 1):
             #    self.sampleInfo.setDataReadingStatus(False)
             self.distributeData(dat,datSer,datTrain)
+            if( self.ni_reader is None ):
+                return
             dat = self.ni_reader.getData()
             if( self.ser_com is not None  ):
                 datSer = self.ser_com.getData(self.ni_reader.bufferSize(),self.sampleInfo.getprocessSR())
             if(self.trainUI is not None):
-                datTrain = self.trainUI.getTargetDir()
+                datTrain = self.trainUI.getTrainingDir()
 
         if( self.ser_com is not None  ):
             self.ser_com.resetData()

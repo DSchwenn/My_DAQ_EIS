@@ -45,9 +45,25 @@ class TrainingFileWriter(threading.Thread):
         self.end_thread = False
         self.path = pth
         self.start()
+
+        self.nnInputSize = [0,0]
+        self.lastSampleData = np.array([])
     
+    def setNNInputSize(self,inSize):
+        self.nnInputSize = inSize
+
+    def backupLastSampleData(self):
+        self.lastSampleData = self.blockData[-self.nnInputSize[0]:,:] 
+
+    def getLastDataSet(self):
+        if( self.set_sample_counter >= self.nnInputSize[0] ):
+            return self.blockData[self.set_sample_counter-self.nnInputSize[0]:self.set_sample_counter,:]
+        else:
+            return self.lastSampleData
+
+
     def settings(self,recLength):
-        self.datasetLength = recLength;
+        self.datasetLength = recLength
 
     def setPath(self,pth):
         if(pth[-1]!='\\' and pth[-1]!='/'):
@@ -190,6 +206,7 @@ class TrainingFileWriter(threading.Thread):
             #    print(self.set_sample_counter/100)
 
             if(self.set_sample_counter>=self.samples_per_block):
+                self.backupLastSampleData()
                 np.save(self.generateFilename(),self.blockData)
                 np.save
                 self.set_sample_counter = 0

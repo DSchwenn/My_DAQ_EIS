@@ -19,13 +19,18 @@ class KerasNNGenerator():
         self.cellnum = 64
         self.layernum = 4
         self.dropout = 0.2
+        self.inputShape = [0,0]
+        self.outNum = 0
         
 
     def createNeuralNet(self, inputShape, outputNum):
         # inputShape: [timesamples, inputs]
+        self.inputShape = inputShape
+        self.outNum = outputNum
 
         # Training The LSTM
         model = Sequential()
+        
 
         # Creating LSTM and Dropout Layers
         if(self.layernum>1 ):
@@ -77,7 +82,7 @@ class KerasNNGenerator():
     def generateFileName(self):
         now = datetime.now() 
         date_time = now.strftime("%Y%m%d_%H%M%S")
-        fn = self.path + date_time + str(self.layernum ) + "_" + str(self.cellnum ) + "_" + str(self.dropout ) + ".nn_model"
+        fn = self.path + date_time + str(self.layernum ) + "_" + str(self.cellnum ) + "_" + str(self.dropout ) + "_" + str(self.inputShape) + "_" + str(self.outNum) + ".nn_model"
         return fn
 
     

@@ -1,5 +1,7 @@
 
 
+from cmath import nan
+from PyQt5 import QtGui
 from PyQt5.QtWidgets import QMainWindow, QAction, QApplication, QWidget, QPushButton, qApp, QLabel, QHBoxLayout, QVBoxLayout, QSplitter, QDialog
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QImage, QMatrix4x4, QQuaternion, QVector3D, QColor, QGuiApplication
 from PyQt5.QtGui import QTransform as QTT
@@ -14,22 +16,23 @@ from PyQt5.Qt3DExtras import QForwardRenderer, QPhongMaterial, QPhongAlphaMateri
 from PyQt5.Qt3DLogic import QFrameAction
 
 import numpy as np
+#import math
 import time, threading
 
-from enum import Enum
+from enum import IntEnum
 
 
 #from qt_for_python.uic.my_custom_dialog_3d import *
 
 
 
-class TrainingModesDirection(Enum):
+class TrainingModesDirection(IntEnum):
     DIR_2D_CARDINAL = 0
     DIR_2D_ANY = 1
     DIR_3D_CARDINAL = 2
     DIR_3D_ANY = 3
 
-class TrainingModesChangeType(Enum):
+class TrainingModesChangeType(IntEnum):
     DIR_CHANGE_CONTINUOUS = 0
     DIR_CHANGE_STEPWISE = 1
 
@@ -40,13 +43,41 @@ class QT3DTargetDialog(QDialog):
         #self.ui = Ui_Dialog()
         #self.ui.setupUi(self)
         #self.ui.gridLayout.addWidget(self.btm_channel_cb)
-        self.layout = QVBoxLayout()
+        self.layout = QVBoxLayout(self)
         self.q3d = QT3DTarget()
+        self.label = QLabel(self)
+        self.label.setText("Not initialized...")
+        self.label.setFixedHeight(40)
+        self.layout.addWidget(self.label)
+        #self.layout.addStretch(0.02)
         self.layout.addWidget(self.q3d)
+        #self.layout.addStretch(1)
+        self.layout.setSpacing(1)
         self.setLayout(self.layout)
         self.setWindowFlag(Qt.WindowMaximizeButtonHint, True)
         self.resize(1024,768)
         self.setModal(False)
+
+        self.lblA = False
+
+    
+    def setPredictedDirection(self,enable = True, dir = [[0,0]],count=0):
+        if(dir is None):
+            return
+        gtDir = self.getTrainingDir()
+        dir = dir[0]
+        dir = np.array(dir)
+        dir = np.divide(dir,np.sqrt(np.sum( np.square(dir))))
+        
+        self.q3d.target.setAnimation(enable)
+        self.q3d.setTargetDir(dir)
+
+        txta = "*"
+        if(self.lblA):
+            txta = "+"
+        self.lblA = not self.lblA
+
+        self.label.setText( "Pred: " + str(dir) + " " + str(np.arctan2(dir[1],dir[0])/np.pi*180) +  " (" + str(count) + "); Tgt: " + str(gtDir[:-1]) + " " + txta )
 
 
     def setupTraining(self,change_time, mode,changeTimeMin,changeTimeMax):
@@ -56,9 +87,17 @@ class QT3DTargetDialog(QDialog):
     def getTargetDir(self):
         return self.q3d.getTargetDir()
 
+    def getTrainingDir(self):
+        return self.q3d.getTrainingDir()
 
     def setTrainingMode(self,mode):
         return self.q3d.setTrainingMode(mode)
+
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        self.q3d.close()
+        return super().closeEvent(a0)
+
+    #def self.q3d
 
 
 
@@ -66,7 +105,6 @@ class QT3DTarget(QWidget):
     def __init__(self):
         #super(QT3DTarget, self).__init__()
         super(QT3DTarget,self).__init__()
-
 
         self.view = Qt3DWindow()
         self.view.defaultFrameGraph().setClearColor( QColor("#000000") )
@@ -106,8 +144,11 @@ class QT3DTarget(QWidget):
         self.training_change_time_max = 10
         self.training_change_time = 5
         self.training_mode = TrainingModesDirection.DIR_2D_ANY
-        self.training_target = [0,1,0]
+        self.target_dir = [0,1,0]
+        self.training_dir = [0,1,0]
         self.running = True
+
+        self.t = None
 
         self.startTrainingTimer()
 
@@ -115,6 +156,15 @@ class QT3DTarget(QWidget):
     def setAllRotation(self,axis,ang):
         self.arrow.setRotation(axis,ang)
         self.target.setRotation(axis,ang)
+
+    def setTargetDir(self,dir):
+        if(dir is None ): # or math.isnan(dir)):
+            return
+        if(len(np.shape(dir))>1):
+            dir=dir[0]
+        ang = np.arctan2(dir[1],dir[0])/np.pi*180
+        self.target.setRotation(QVector3D(0, 0, 1.0),ang)
+        self.target_dir = [dir[0],dir[1],0]
 
     def setTrainingMode(self,mode):
         self.training_mode = mode
@@ -133,27 +183,41 @@ class QT3DTarget(QWidget):
         if( self.training_mode == TrainingModesDirection.DIR_2D_CARDINAL ):
             dirRotX = np.random.randint(0,4)
             ang = 90.0*dirRotX
-            self.setAllRotation(QVector3D(0, 0, 1.0),ang)
-            self.training_target = [np.cos(np.deg2rad(ang)),np.sin(np.deg2rad(ang)),0]
+            self.arrow.setRotation(QVector3D(0, 0, 1.0),ang)
+            self.training_dir = [np.cos(np.deg2rad(ang)),np.sin(np.deg2rad(ang)),0]
         else: # DIR_2D_ANY TODO: implement 3D/ continuous
             ang = float(np.random.randint(0,360))
-            self.setAllRotation(QVector3D(0, 0, 1.0),ang)
-            self.training_target = [np.cos(np.deg2rad(ang)),np.sin(np.deg2rad(ang)),0]
+            self.arrow.setRotation(QVector3D(0, 0, 1.0),ang)
+            self.training_dir = [np.cos(np.deg2rad(ang)),np.sin(np.deg2rad(ang)),0]
 
         if(self.running):
             self.startTrainingTimer()
 
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        print("Close target dialog...")
+        self.stopTimer()
+        return super().closeEvent(a0)
 
     def startTrainingTimer(self):
-        threading.Timer(self.training_change_time,self.trainingCallback).start()
+        self.t = threading.Timer(self.training_change_time,self.trainingCallback)
+        self.t.start()
         self.updateTrainingTime()
+
+    def stopTimer(self):
+        if(not self.t is None):
+            self.t.cancel()
+            self.t = None
+
+
 
     def updateTrainingTime(self):
         self.training_change_time = np.random.rand()*(self.training_change_time_max-self.training_change_time_min)+self.training_change_time_min
 
+    def getTrainingDir(self):
+        return self.training_dir
 
     def getTargetDir(self):
-        return self.training_target
+        return self.target_dir
 
 
     @QtCore.pyqtSlot()
@@ -359,7 +423,7 @@ class TragetEntity():
         self.mat = material
 
         self.radius = radius
-        self.rotAxis = QVector3D(0.0, 0.0, 0.0)
+        self.rotAxis = QVector3D(0.0, 0.0, 1.0)
         self.rotAngle = 0.0
 
 

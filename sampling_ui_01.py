@@ -22,6 +22,8 @@ from ni_data_handler import *
 from channel_sample_info import *
 from serial_uc_com import *
 from training_file_writer import TrainingFileWriter
+from keras_training_interface import KerasTrainingInterface
+from keras_nn_gen_01 import KerasNNGenerator
 
 from channel_sample_info import *
 
@@ -312,14 +314,16 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.train_channel_cb.contentChanged.connect( self.updateTargetChannelSelection )
         self.ui.trainLive_checkBox.stateChanged.connect(self.updateTrainDistribution)
         self.ui.train_dataset_len_doubleSpinBox.valueChanged.connect(self.updateTrainDistribution)
+        self.ui.prep2train_pushButton.clicked.connect( self.prepNNtraining )
+        self.ui.train_select_file_pushButton.clicked.connect( self.selectNNModel )
+        self.ui.train_create_nn_pushButton.clicked.connect( self.createNN )
+        self.ui.train_viz_output_checkBox.stateChanged.connect( self.tgtVizSettingCallback )
         # trainLive_checkBox
         # train_target_mode_comboBox
         # train_sequence_doubleSpinBox
         # train_input_shape_label
-        # train_create_script_checkBox
-        # train_load_model_checkBox
         # train_filename_lineEdit
-        # train_select_file_pushButton
+        
         # train_backup_weights_checkBox
         # train_continue_training_checkBox
         # train_viz_output_checkBox
@@ -335,6 +339,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.ui.actionTgtHide.triggered.connect(self.hideTgtDialog)
         #self.targetDialog.show()
         self.nn_training = None #TrainMyNN()
+        self.trainingPrepared = False 
+        self.predictedTargetUpdateTimer = None
         
         self.datahandler = NiDataHandler(self.sampleInfo,self.sc,self.targetDialog)
 
@@ -674,11 +680,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     # general callbacks
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         print("Closing main window")
         if(self.datahandler.isRunnung() or self.isStarted):
             self.startAll()
 
+        self.stopTargetUpdateTimer()
 
         self.sc.killConnection()
 
@@ -692,9 +699,23 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.btmplot.join()
         self.topplot.join()
 
-        self.sc.join()
+        self.trainRecorder.killThread()
+        self.trainRecorder.join()
+
+        if(self.sc.isThrStarted()):
+            self.sc.join()
+
+        if(not self.nn_training is None ):
+            self.nn_training.killThread()
 
         unset_keepawake()
+
+        #stopTimer(
+        #self.targetDialog.stopTimer()
+        self.targetDialog.close()
+
+        print("END...")
+        return super().closeEvent(a0)
 
 
     @QtCore.pyqtSlot()
@@ -813,8 +834,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
         trainSet.append(self.train_channel_cb.itemCheckedList())
         trainSet.append(self.ui.train_dataset_len_doubleSpinBox.value())
         trainSet.append(self.ui.train_sequence_doubleSpinBox.value())
-        trainSet.append(self.ui.train_create_script_checkBox.isChecked())
-        trainSet.append(self.ui.train_load_model_checkBox.isChecked())
         trainSet.append(self.ui.train_filename_lineEdit.text())
         trainSet.append(self.ui.train_backup_weights_checkBox.isChecked())
         trainSet.append(self.ui.train_continue_training_checkBox.isChecked())
@@ -834,18 +853,16 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.train_channel_cb.setItemsChecked(trainSet[1])
         self.ui.train_dataset_len_doubleSpinBox.setValue(trainSet[2])
         self.ui.train_sequence_doubleSpinBox.setValue(trainSet[3])
-        self.ui.train_create_script_checkBox.setChecked(trainSet[4])
-        self.ui.train_load_model_checkBox.setChecked(trainSet[5])
-        self.ui.train_filename_lineEdit.setText(trainSet[6])
-        self.ui.train_backup_weights_checkBox.setChecked(trainSet[7])
-        self.ui.train_continue_training_checkBox.setChecked(trainSet[8])
-        self.ui.train_viz_output_checkBox.setChecked(trainSet[9])
-        self.ui.train_test_only_checkBox.setChecked(trainSet[10])
-        self.ui.train_regularly_checkBox.setChecked(trainSet[11])
-        self.ui.train_record_set_doubleSpinBox.setValue(trainSet[12])
-        self.ui.train_backup_steps_checkBox.setChecked(trainSet[13])
-        self.ui.train_datasets_spinBox.setValue(trainSet[14])
-        self.ui.train_dataset_select_comboBox.setCurrentIndex(trainSet[14])
+        self.ui.train_filename_lineEdit.setText(trainSet[4])
+        self.ui.train_backup_weights_checkBox.setChecked(trainSet[5])
+        self.ui.train_continue_training_checkBox.setChecked(trainSet[6])
+        self.ui.train_viz_output_checkBox.setChecked(trainSet[7])
+        self.ui.train_test_only_checkBox.setChecked(trainSet[8])
+        self.ui.train_regularly_checkBox.setChecked(trainSet[9])
+        self.ui.train_record_set_doubleSpinBox.setValue(trainSet[10])
+        self.ui.train_backup_steps_checkBox.setChecked(trainSet[11])
+        self.ui.train_datasets_spinBox.setValue(trainSet[12])
+        self.ui.train_dataset_select_comboBox.setCurrentIndex(trainSet[13])
 
 
     @QtCore.pyqtSlot()
@@ -967,6 +984,32 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.topplot.updatePlot()
         self.btmplot.updatePlot()
 
+    def targetUpdateTimerCallback(self):
+        self.nn_training.updateUIPrediction(self.trainRecorder,self.targetDialog)
+        if(self.predictTargetTimerRunning):
+            self.startTargetUpdateTimer()
+
+
+    def startTargetUpdateTimer(self):
+        self.predictedTargetUpdateTimer =  threading.Timer(0.5,self.targetUpdateTimerCallback)
+        self.predictTargetTimerRunning = True
+        self.predictedTargetUpdateTimer.start()
+
+    def stopTargetUpdateTimer(self):
+        if(not self.predictedTargetUpdateTimer is None):
+            self.predictTargetTimerRunning = False
+            self.predictedTargetUpdateTimer.cancel()
+            self.predictedTargetUpdateTimer = None
+
+    @QtCore.pyqtSlot()
+    def tgtVizSettingCallback(self): # train_viz_output_checkBox
+        if(self.ui.trainLive_checkBox.isChecked()):
+            if(self.ui.train_viz_output_checkBox.isEnabled()):
+                self.startTargetUpdateTimer()
+        else:
+            self.stopTargetUpdateTimer()
+            self.targetDialog.setPredictedDirection(False)
+
     @QtCore.pyqtSlot()
     def updateTrainDistribution(self):
         self.UpdateChannelSampleInfo()
@@ -975,11 +1018,113 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.trainRecorder.settings( self.ui.train_dataset_len_doubleSpinBox.value() )
 
         if(self.ui.trainLive_checkBox.isChecked()):
+            self.prepNNtraining()
+            # self.nn_training.updateUIPrediction(self.trainRecorder,self.targetDialog)
+            if(self.ui.train_viz_output_checkBox.isChecked()):
+                self.startTargetUpdateTimer()
             self.train_channel_cb.setEnabled(False)
             self.ui.train_dataset_len_doubleSpinBox.setEnabled(False)
+            self.ui.prep2train_pushButton.setEnabled(False)
+            self.ui.train_create_nn_pushButton.setEnabled(False)
+            self.ui.train_sequence_doubleSpinBox.setEnabled(False)
+            self.ui.train_filename_lineEdit.setEnabled(False)
+            self.ui.train_select_file_pushButton.setEnabled(False)
+            self.ui.train_backup_weights_checkBox.setEnabled(False)
+            self.ui.train_continue_training_checkBox.setEnabled(False)
+            #self.ui.train_viz_output_checkBox.setEnabled(False)
+            self.ui.train_test_only_checkBox.setEnabled(False)
+            self.ui.train_regularly_checkBox.setEnabled(False)
+            self.ui.train_record_set_doubleSpinBox.setEnabled(False)
+            self.ui.train_backup_steps_checkBox.setEnabled(False)
+            self.ui.train_datasets_spinBox.setEnabled(False)
         else:
+            self.stopTargetUpdateTimer()
             self.train_channel_cb.setEnabled(True)
             self.ui.train_dataset_len_doubleSpinBox.setEnabled(True)
+            self.ui.prep2train_pushButton.setEnabled(True)
+            self.ui.train_create_nn_pushButton.setEnabled(True)
+            self.ui.train_sequence_doubleSpinBox.setEnabled(True)
+            self.ui.train_filename_lineEdit.setEnabled(True)
+            self.ui.train_select_file_pushButton.setEnabled(True)
+            self.ui.train_backup_weights_checkBox.setEnabled(True)
+            self.ui.train_continue_training_checkBox.setEnabled(True)
+            #self.ui.train_viz_output_checkBox.setEnabled(True)
+            self.ui.train_test_only_checkBox.setEnabled(True)
+            self.ui.train_regularly_checkBox.setEnabled(True)
+            self.ui.train_record_set_doubleSpinBox.setEnabled(True)
+            self.ui.train_backup_steps_checkBox.setEnabled(True)
+            self.ui.train_datasets_spinBox.setEnabled(True)
+
+
+    @QtCore.pyqtSlot()
+    def selectNNModel(self):
+        file = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
+        if(len(file)<1):
+            return
+
+        self.ui.train_filename_lineEdit.setText( file )
+
+
+    @QtCore.pyqtSlot()
+    def  prepNNtraining(self):
+        if(self.trainingPrepared):
+            return
+
+        targetMode = TrainingModesDirection(self.ui.train_target_mode_comboBox.currentIndex())
+        nTargetsinData = 3
+        
+        self.ui.train_sequence_doubleSpinBox
+
+        tt = self.ui.train_sequence_doubleSpinBox.value()
+        fg = self.generateFunctionGenerator(False)
+        sr = fg.getProcessedSampleRate()
+        nTimestep = int(tt*sr)
+
+        lst = self.sampleInfo.getTrainIdList()
+        nChLst = [l[3] for l in lst]
+        nData = np.sum( nChLst )
+        
+        if( self.nn_training is None ):
+            self.nn_training = KerasTrainingInterface(targetMode,nTargetsinData,nData,nTimestep,self.sampleInfo)
+        else:
+            self.nn_training.setupDataSizes(targetMode,nTargetsinData,nData,nTimestep)
+
+
+        pathname = self.ui.train_filename_lineEdit.text()
+        if( len(pathname)<1 ):
+            return
+        self.nn_training.setupModel(pathname)
+
+        backupWeights = self.ui.train_backup_weights_checkBox.isChecked()
+        backupSteps = self.ui.train_backup_steps_checkBox.isChecked()
+        continueTraining = self.ui.train_continue_training_checkBox.isChecked()
+        visualizeOutout = self.ui.train_viz_output_checkBox.isChecked() # not implemented...
+        onlyTesting = self.ui.train_test_only_checkBox.isChecked()
+
+        self.nn_training.setupMeta(backupWeights,backupSteps,continueTraining,visualizeOutout,onlyTesting)
+
+
+        trainingTime = self.ui.train_dataset_len_doubleSpinBox.value() * 0.8 # tzrain for...
+        trasiningInterval = self.ui.train_record_set_doubleSpinBox.value()
+        minTrainSetNum = self.ui.train_datasets_spinBox.value()
+
+        useRandomTrainSets = True
+        if( self.ui.train_dataset_select_comboBox.currentIndex()>0 ):
+            useRandomTrainSets = False
+        doAutoTriggeredTraining = self.ui.train_regularly_checkBox.isChecked()
+
+        self.nn_training.setupParameter(trainingTime,trasiningInterval,minTrainSetNum,useRandomTrainSets,doAutoTriggeredTraining)
+
+        self.trainRecorder.setNNInputSize( [nTimestep,nData] )
+
+        self.trainingPrepared = True # TODO: reset when settings are changed
+
+
+    def stopNNtraining(self):
+        if(self.nn_training is None):
+            return
+        
+        self.nn_training.haltTraining()
 
 
     def updateTrainInputShapeLabel(self):
@@ -992,7 +1137,21 @@ class MyMainWindow(QtWidgets.QMainWindow):
         nChLst = [l[3] for l in lst]
         nCh = np.sum( nChLst )
 
-        self.ui.train_input_shape_label.setText("--> input shape is: [" + str(nSample) + "," + str(nCh) + "]")
+        self.ui.train_input_shape_label.setText("--> input shape is: [" + str(nSample) + "," + str(nCh-3) + "]")
+
+        return (nCh,nSample)
+
+    @QtCore.pyqtSlot()
+    def createNN(self):
+        mode = self.ui.train_target_mode_comboBox.currentIndex()
+        nTgt = 2
+        if(mode>1):
+            nTgt = 3
+        (nCh,nSmp) = self.updateTrainInputShapeLabel()
+        kg = KerasNNGenerator()
+        kg.createNeuralNet( [nSmp,nCh-3], nTgt)
+        fn = kg.saveNeuralNet()
+        self.ui.train_filename_lineEdit.setText(fn)
 
 
     @QtCore.pyqtSlot()
